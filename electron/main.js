@@ -85,8 +85,7 @@ function createWindow() {
     },
   })
 
-  // Windows 11 Acrylic 毛玻璃（展开态才开启，折叠时关闭避免方形残影）
-  try { mainWindow.setBackgroundMaterial?.('acrylic') } catch (e) {}
+  // 不用 setBackgroundMaterial，靠 CSS backdrop-filter 实现毛玻璃
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
@@ -154,36 +153,14 @@ ipcMain.handle('tasks:save', (_, data) => {
 ipcMain.handle('window:collapse', () => {
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
-
   collapsedPos = mainWindow.getPosition()
-  const display = screen.getPrimaryDisplay().workAreaSize
-
-  try { mainWindow.setBackgroundMaterial?.('none') } catch (e) {}
-
-  mainWindow.setResizable(true)
-  mainWindow.setMinimumSize(1, 1)
-  mainWindow.setBounds({
-    x: display.width - MINI_SIZE - 16,
-    y: display.height - MINI_SIZE - 16,
-    width: MINI_SIZE,
-    height: MINI_SIZE,
-  })
-  mainWindow.setResizable(false)
+  mainWindow.setSize(MINI_SIZE, MINI_SIZE)
 })
 
 ipcMain.handle('window:expand', () => {
   const data = loadData()
   const { width, height } = data.settings.windowSize
-  const display = screen.getPrimaryDisplay().workAreaSize
-
-  let x = collapsedPos?.[0] ?? data.settings.position?.x ?? display.width - width - 20
-  let y = collapsedPos?.[1] ?? data.settings.position?.y ?? display.height - height - 20
-  collapsedPos = null
-
-  mainWindow.setResizable(true)
-  mainWindow.setBounds({ x, y, width, height })
-  mainWindow.setResizable(false)
-  try { mainWindow.setBackgroundMaterial?.('acrylic') } catch (e) {}
+  mainWindow.setSize(width, height)
 })
 
 // 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
