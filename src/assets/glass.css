@@ -1,0 +1,59 @@
+:root {
+  --bg-base: rgba(10, 15, 28, 0.88);
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-focus: rgba(99, 102, 241, 0.6);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+
+  --priority-urgent: #ef4444;
+  --priority-high: #eab308;
+  --priority-medium: #3b82f6;
+  --priority-low: #64748b;
+
+  --priority-urgent-bg: rgba(239, 68, 68, 0.15);
+  --priority-high-bg: rgba(234, 179, 8, 0.13);
+  --priority-medium-bg: rgba(59, 130, 246, 0.13);
+  --priority-low-bg: rgba(100, 116, 139, 0.12);
+
+  --status-todo: #64748b;
+  --status-inprogress: #3b82f6;
+  --status-done: #22c55e;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: transparent;
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  user-select: text;
+}
