@@ -102,18 +102,18 @@ function addTag() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(5, 10, 20, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   border-radius: var(--radius);
+  backdrop-filter: blur(4px);
 }
 
 .panel {
-  background: rgba(15, 23, 42, 0.97);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
+  background: rgba(22, 34, 60, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius);
   width: 90%;
   max-height: 80vh;
@@ -211,8 +211,8 @@ section h4 {
 
 .add-row input {
   flex: 1;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 12px;

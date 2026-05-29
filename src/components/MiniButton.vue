@@ -1,9 +1,7 @@
 <template>
-  <div class="mini-wrap">
-    <div class="mini" @mousedown="startDrag">
-      <span class="icon">📋</span>
-      <span v-if="count > 0" class="badge">{{ count }}</span>
-    </div>
+  <div class="mini" @mousedown="startDrag">
+    <span class="icon">📋</span>
+    <span v-if="count > 0" class="badge">{{ count }}</span>
   </div>
 </template>
 
@@ -42,32 +40,23 @@ function startDrag(e) {
 </script>
 
 <style scoped>
-.mini-wrap {
+/* 填满整个折叠窗口区域，消除透明间隙 */
+.mini {
   width: 100vw;
   height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mini {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.75);
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
   position: relative;
-  transition: transform 0.15s, background 0.15s;
-  /* 不用 box-shadow，避免透明窗口下的黑色残影 */
+  transition: background 0.15s;
 }
 
 .mini:hover {
-  background: rgba(25, 35, 60, 0.85);
-  transform: scale(1.06);
+  background: rgba(25, 38, 65, 0.90);
 }
 
 .mini:active {
@@ -75,15 +64,15 @@ function startDrag(e) {
 }
 
 .icon {
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
   pointer-events: none;
 }
 
 .badge {
   position: absolute;
-  top: -3px;
-  right: -3px;
+  top: 6px;
+  right: 6px;
   background: #ef4444;
   color: white;
   font-size: 10px;

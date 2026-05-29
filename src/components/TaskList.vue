@@ -99,9 +99,9 @@ const filtered = computed(() => {
 }
 
 .filter-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 3px 8px;
   border-radius: 12px;
@@ -111,8 +111,8 @@ const filtered = computed(() => {
 }
 
 .filter-btn:hover {
-  color: var(--text-secondary);
-  border-color: var(--border);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .filter-btn.active {

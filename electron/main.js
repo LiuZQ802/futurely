@@ -70,8 +70,7 @@ function createWindow() {
     y,
     frame: false,
     transparent: true,
-    backgroundMaterial: 'acrylic',  // Windows 11 原生毛玻璃
-    hasShadow: false,               // 禁用 OS 阴影，避免黑色残影
+    hasShadow: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: false,
@@ -82,6 +81,11 @@ function createWindow() {
       nodeIntegration: false,
     },
   })
+
+  // Windows 11 Acrylic 毛玻璃（展开态才开启，折叠时关闭避免方形残影）
+  if (mainWindow.setBackgroundMaterial) {
+    mainWindow.setBackgroundMaterial('acrylic')
+  }
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
@@ -134,9 +138,10 @@ ipcMain.handle('tasks:save', (_, data) => {
 })
 
 ipcMain.handle('window:collapse', () => {
-  // 保存展开时的位置，折叠后贴右下角
   collapsedPos = mainWindow.getPosition()
   const display = screen.getPrimaryDisplay().workAreaSize
+  // 折叠前关闭 acrylic，避免矩形残影
+  if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('none')
   mainWindow.setMinimumSize(1, 1)
   mainWindow.setBounds({
     x: display.width - MINI_SIZE - 16,
@@ -144,8 +149,6 @@ ipcMain.handle('window:collapse', () => {
     width: MINI_SIZE,
     height: MINI_SIZE,
   })
-  // 透明区域不拦截鼠标（但圆钮本体仍可点击）
-  mainWindow.setIgnoreMouseEvents(false)
 })
 
 ipcMain.handle('window:expand', () => {
@@ -153,12 +156,13 @@ ipcMain.handle('window:expand', () => {
   const { width, height } = data.settings.windowSize
   const display = screen.getPrimaryDisplay().workAreaSize
 
-  // 恢复到折叠前位置，或默认位置
   let x = collapsedPos?.[0] ?? data.settings.position?.x ?? display.width - width - 20
   let y = collapsedPos?.[1] ?? data.settings.position?.y ?? display.height - height - 20
   collapsedPos = null
 
   mainWindow.setBounds({ x, y, width, height })
+  // 展开后恢复 acrylic
+  if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('acrylic')
 })
 
 ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
