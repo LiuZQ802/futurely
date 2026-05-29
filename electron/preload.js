@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   collapseWindow: () => ipcRenderer.invoke('window:collapse'),
   expandWindow: () => ipcRenderer.invoke('window:expand'),
   dragWindow: (delta) => ipcRenderer.invoke('window:drag', delta),
+  ignoreMouseEvents: (ignore) => ipcRenderer.invoke('window:ignoreMouseEvents', ignore),
 })

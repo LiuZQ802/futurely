@@ -1,31 +1,35 @@
 :root {
-  --bg-base: rgba(10, 15, 28, 0.88);
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --bg-card-hover: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.10);
-  --border-focus: rgba(99, 102, 241, 0.6);
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  /* 背景：半透明，配合 Windows Acrylic 毛玻璃 */
+  --bg-base: rgba(12, 18, 35, 0.55);
+  --bg-card: rgba(255, 255, 255, 0.07);
+  --bg-card-hover: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.13);
+  --border-focus: rgba(99, 102, 241, 0.7);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   --radius: 14px;
   --radius-sm: 8px;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
+
+  /* 文字：提高亮度确保可读 */
+  --text-primary: #f0f6ff;
+  --text-secondary: #b0bec5;
+  --text-muted: #607080;
+
   --accent: #6366f1;
   --accent-hover: #818cf8;
 
   --priority-urgent: #ef4444;
-  --priority-high: #eab308;
+  --priority-high:   #f59e0b;
   --priority-medium: #3b82f6;
-  --priority-low: #64748b;
+  --priority-low:    #64748b;
 
-  --priority-urgent-bg: rgba(239, 68, 68, 0.15);
-  --priority-high-bg: rgba(234, 179, 8, 0.13);
-  --priority-medium-bg: rgba(59, 130, 246, 0.13);
-  --priority-low-bg: rgba(100, 116, 139, 0.12);
+  --priority-urgent-bg: rgba(239, 68, 68, 0.18);
+  --priority-high-bg:   rgba(245, 158, 11, 0.15);
+  --priority-medium-bg: rgba(59, 130, 246, 0.15);
+  --priority-low-bg:    rgba(100, 116, 139, 0.12);
 
-  --status-todo: #64748b;
+  --status-todo:       #64748b;
   --status-inprogress: #3b82f6;
-  --status-done: #22c55e;
+  --status-done:       #22c55e;
 }
 
 * {
@@ -34,7 +38,7 @@
   padding: 0;
 }
 
-body {
+html, body {
   background: transparent;
   font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -49,7 +53,7 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 2px;
 }
 
