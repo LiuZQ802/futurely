@@ -89,42 +89,13 @@ async function startResize(dir, e) {
   const api = window.electronAPI
   if (!api) return
 
-  const MIN_W = 280
-  const MIN_H = 360
-
-  // 以当前实际 bounds 为起点，增量更新
-  let cur = await api.getBounds()
-
-  const onMove = async (ev) => {
-    let { x, y, width, height } = cur
-    const dx = ev.movementX
-    const dy = ev.movementY
-
-    if (dir.includes('e')) width  = Math.max(MIN_W, width  + dx)
-    if (dir.includes('s')) height = Math.max(MIN_H, height + dy)
-    if (dir.includes('w')) {
-      const nw = Math.max(MIN_W, width - dx)
-      x += width - nw
-      width = nw
-    }
-    if (dir.includes('n')) {
-      const nh = Math.max(MIN_H, height - dy)
-      y += height - nh
-      height = nh
-    }
-
-    cur = { x, y, width, height }
-    await api.resizeWindow(cur)
-  }
+  // 在主进程处理 resize，避免渲染进程 DPI 转换问题
+  await api.startResize(dir)
 
   const onUp = async () => {
-    window.removeEventListener('mousemove', onMove)
     window.removeEventListener('mouseup', onUp)
-    const b = await api.getBounds()
-    await api.saveWindowSize({ width: b.width, height: b.height })
+    await api.stopResize()
   }
-
-  window.addEventListener('mousemove', onMove)
   window.addEventListener('mouseup', onUp)
 }
 </script>

@@ -6,7 +6,9 @@ const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
 let mainWindow = null
 let tray = null
-let collapsedPos = null  // 折叠前保存位置，展开时恢复
+let collapsedPos = null
+let resizeTimer = null
+let resizeState = null
 
 const MINI_SIZE = 64
 const dataPath = path.join(app.getPath('userData'), 'tasks.json')
@@ -73,6 +75,7 @@ function createWindow() {
     hasShadow: false,
     alwaysOnTop: true,
     resizable: false,
+    maximizable: false,   // 禁用双击最大化（drag 区域双击会触发）
     skipTaskbar: false,
     show: false,
     webPreferences: {
@@ -98,7 +101,7 @@ function createWindow() {
     checkDeadlines(data)
   })
 
-  // 禁止页面缩放（防止 Ctrl+滚轮 / 触控板捏合导致窗口内容"越来越大"）
+  // 禁止页面缩放
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.setZoomFactor(1.0)
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
@@ -111,11 +114,10 @@ function createWindow() {
     saveData(d)
   })
 
-  // 窗口失焦时通知渲染进程，以便自动折叠
+  // 失焦自动折叠（resize 过程中不触发）
   mainWindow.on('blur', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('window-blur')
-    }
+    if (!mainWindow || mainWindow.isDestroyed() || resizeState) return
+    mainWindow.webContents.send('window-blur')
   })
 }
 
@@ -142,7 +144,8 @@ function createTray() {
   })
 }
 
-// IPC 处理器
+// ── IPC 处理器 ──────────────────────────────────────
+
 ipcMain.handle('tasks:load', () => loadData())
 
 ipcMain.handle('tasks:save', (_, data) => {
@@ -153,7 +156,6 @@ ipcMain.handle('tasks:save', (_, data) => {
 ipcMain.handle('window:collapse', () => {
   collapsedPos = mainWindow.getPosition()
   const display = screen.getPrimaryDisplay().workAreaSize
-  // 折叠前关闭 acrylic，避免矩形残影
   if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('none')
   mainWindow.setMinimumSize(1, 1)
   mainWindow.setBounds({
@@ -174,37 +176,52 @@ ipcMain.handle('window:expand', () => {
   collapsedPos = null
 
   mainWindow.setBounds({ x, y, width, height })
-  // 展开后恢复 acrylic
   if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('acrylic')
 })
 
-ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
-  const [wx, wy] = mainWindow.getPosition()
-  mainWindow.setPosition(wx + mouseX, wy + mouseY)
+// 调整大小：完全在主进程处理，避免渲染进程 DPI 转换问题
+ipcMain.handle('window:startResize', (_, dir) => {
+  const initBounds = mainWindow.getBounds()
+  const initMouse = screen.getCursorScreenPoint()
+  const scale = screen.getPrimaryDisplay().scaleFactor
+  resizeState = { dir, initBounds, initMouse }
+
+  resizeTimer = setInterval(() => {
+    const mouse = screen.getCursorScreenPoint()
+    const dx = (mouse.x - initMouse.x) / scale   // 物理→逻辑像素
+    const dy = (mouse.y - initMouse.y) / scale
+
+    let { x, y, width, height } = initBounds
+    const MIN_W = 280, MIN_H = 360
+
+    if (dir.includes('e')) width  = Math.max(MIN_W, Math.round(width  + dx))
+    if (dir.includes('s')) height = Math.max(MIN_H, Math.round(height + dy))
+    if (dir.includes('w')) {
+      const newW = Math.max(MIN_W, Math.round(width - dx))
+      x += width - newW
+      width = newW
+    }
+    if (dir.includes('n')) {
+      const newH = Math.max(MIN_H, Math.round(height - dy))
+      y += height - newH
+      height = newH
+    }
+
+    mainWindow.setBounds({ x, y, width, height })
+  }, 16)
 })
 
-ipcMain.handle('window:ignoreMouseEvents', (_, ignore) => {
-  mainWindow.setIgnoreMouseEvents(ignore, { forward: true })
-})
-
-ipcMain.handle('window:getBounds', () => mainWindow.getBounds())
-
-ipcMain.handle('window:resize', (_, bounds) => {
-  const MIN_W = 280
-  const MIN_H = 360
-  const b = {
-    x: Math.round(bounds.x),
-    y: Math.round(bounds.y),
-    width:  Math.round(Math.max(MIN_W, bounds.width)),
-    height: Math.round(Math.max(MIN_H, bounds.height)),
+ipcMain.handle('window:stopResize', () => {
+  if (resizeTimer) {
+    clearInterval(resizeTimer)
+    resizeTimer = null
   }
-  mainWindow.setBounds(b)
-})
-
-ipcMain.handle('window:saveSize', (_, { width, height }) => {
+  resizeState = null
+  const b = mainWindow.getBounds()
   const d = loadData()
-  d.settings.windowSize = { width, height }
+  d.settings.windowSize = { width: b.width, height: b.height }
   saveData(d)
+  return { width: b.width, height: b.height }
 })
 
 app.whenReady().then(() => {

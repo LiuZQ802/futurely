@@ -1,5 +1,5 @@
 <template>
-  <div class="mini" @mousedown="startDrag">
+  <div class="mini" @click="emit('expand')">
     <span class="icon">📋</span>
     <span v-if="count > 0" class="badge">{{ count }}</span>
   </div>
@@ -12,27 +12,6 @@ import { useTaskStore } from '../store/tasks.js'
 const emit = defineEmits(['expand'])
 const store = useTaskStore()
 const count = computed(() => store.activeTasks.length)
-
-function startDrag(e) {
-  if (e.button !== 0) return
-  let totalMoved = 0
-  let hasMoved = false
-
-  const onMove = async (ev) => {
-    totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
-    if (!hasMoved && totalMoved > 6) hasMoved = true
-    if (hasMoved) await window.electronAPI?.dragWindow({ mouseX: ev.movementX, mouseY: ev.movementY })
-  }
-
-  const onUp = () => {
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
-    if (!hasMoved) emit('expand')
-  }
-
-  window.addEventListener('mousemove', onMove)
-  window.addEventListener('mouseup', onUp)
-}
 </script>
 
 <style scoped>
@@ -49,14 +28,11 @@ function startDrag(e) {
   cursor: grab;
   position: relative;
   transition: background 0.15s;
+  -webkit-app-region: drag;   /* Electron 原生拖拽 */
 }
 
 .mini:hover {
   background: rgba(25, 38, 65, 0.90);
-}
-
-.mini:active {
-  cursor: grabbing;
 }
 
 .icon {

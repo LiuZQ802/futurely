@@ -1,13 +1,10 @@
 <template>
-  <div
-    class="header"
-    @mousedown="startDrag"
-  >
+  <div class="header">
     <div class="left">
       <span class="title">📋 桌面清单</span>
       <span v-if="activeCount > 0" class="count">{{ activeCount }}</span>
     </div>
-    <div class="actions" @mousedown.stop>
+    <div class="actions">
       <button class="btn" title="新建任务" @click="$emit('add-task')">＋</button>
       <button class="btn" title="设置" @click="$emit('open-settings')">⚙</button>
       <button class="btn" title="折叠" @click="$emit('collapse')">—</button>
@@ -23,22 +20,6 @@ defineEmits(['collapse', 'open-settings', 'add-task'])
 
 const store = useTaskStore()
 const activeCount = computed(() => store.activeTasks.length)
-
-function startDrag(e) {
-  if (e.button !== 0) return
-
-  const onMove = async (ev) => {
-    await window.electronAPI?.dragWindow({ mouseX: ev.movementX, mouseY: ev.movementY })
-  }
-
-  const onUp = () => {
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
-  }
-
-  window.addEventListener('mousemove', onMove)
-  window.addEventListener('mouseup', onUp)
-}
 </script>
 
 <style scoped>
@@ -50,10 +31,7 @@ function startDrag(e) {
   cursor: grab;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-}
-
-.header:active {
-  cursor: grabbing;
+  -webkit-app-region: drag;   /* Electron 原生拖拽，无 DPI 问题 */
 }
 
 .left {
@@ -80,6 +58,7 @@ function startDrag(e) {
 .actions {
   display: flex;
   gap: 4px;
+  -webkit-app-region: no-drag;  /* 按钮区域不可拖拽，确保可点击 */
 }
 
 .btn {
@@ -96,6 +75,7 @@ function startDrag(e) {
   justify-content: center;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
+  -webkit-app-region: no-drag;
 }
 
 .btn:hover {
