@@ -158,16 +158,17 @@ ipcMain.handle('window:collapse', () => {
   collapsedPos = mainWindow.getPosition()
   const display = screen.getPrimaryDisplay().workAreaSize
 
-  // 安全关闭 acrylic（某些 Windows 版本可能抛异常）
   try { mainWindow.setBackgroundMaterial?.('none') } catch (e) {}
-  try { mainWindow.setMinimumSize(1, 1) } catch (e) {}
 
+  mainWindow.setResizable(true)
+  mainWindow.setMinimumSize(1, 1)
   mainWindow.setBounds({
     x: display.width - MINI_SIZE - 16,
     y: display.height - MINI_SIZE - 16,
     width: MINI_SIZE,
     height: MINI_SIZE,
   })
+  mainWindow.setResizable(false)
 })
 
 ipcMain.handle('window:expand', () => {
@@ -179,7 +180,9 @@ ipcMain.handle('window:expand', () => {
   let y = collapsedPos?.[1] ?? data.settings.position?.y ?? display.height - height - 20
   collapsedPos = null
 
+  mainWindow.setResizable(true)
   mainWindow.setBounds({ x, y, width, height })
+  mainWindow.setResizable(false)
   try { mainWindow.setBackgroundMaterial?.('acrylic') } catch (e) {}
 })
 
