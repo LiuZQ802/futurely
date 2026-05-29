@@ -110,6 +110,13 @@ function createWindow() {
     d.settings.position = { x: wx, y: wy }
     saveData(d)
   })
+
+  // 窗口失焦时通知渲染进程，以便自动折叠
+  mainWindow.on('blur', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-blur')
+    }
+  })
 }
 
 function createTray() {

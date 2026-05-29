@@ -24,27 +24,14 @@ defineEmits(['collapse', 'open-settings', 'add-task'])
 const store = useTaskStore()
 const activeCount = computed(() => store.activeTasks.length)
 
-let dragging = false
-let lastX = 0
-let lastY = 0
-
 function startDrag(e) {
   if (e.button !== 0) return
-  dragging = true
-  lastX = e.screenX
-  lastY = e.screenY
 
   const onMove = async (ev) => {
-    if (!dragging) return
-    const dx = ev.screenX - lastX
-    const dy = ev.screenY - lastY
-    lastX = ev.screenX
-    lastY = ev.screenY
-    await window.electronAPI?.dragWindow({ mouseX: dx, mouseY: dy })
+    await window.electronAPI?.dragWindow({ mouseX: ev.movementX, mouseY: ev.movementY })
   }
 
   const onUp = () => {
-    dragging = false
     window.removeEventListener('mousemove', onMove)
     window.removeEventListener('mouseup', onUp)
   }

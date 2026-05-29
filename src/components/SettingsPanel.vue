@@ -102,23 +102,23 @@ function addTag() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 10, 20, 0.6);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   border-radius: var(--radius);
-  backdrop-filter: blur(4px);
 }
 
 .panel {
-  background: rgba(22, 34, 60, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #1e3456;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: var(--radius);
   width: 90%;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
 
 .panel-header {
@@ -152,7 +152,7 @@ function addTag() {
 }
 
 section h4 {
-  color: var(--text-secondary);
+  color: #c8d8f0;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -211,8 +211,8 @@ section h4 {
 
 .add-row input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 12px;

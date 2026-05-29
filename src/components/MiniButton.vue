@@ -15,17 +15,13 @@ const count = computed(() => store.activeTasks.length)
 
 function startDrag(e) {
   if (e.button !== 0) return
-  let lastX = e.screenX
-  let lastY = e.screenY
+  let totalMoved = 0
   let hasMoved = false
 
   const onMove = async (ev) => {
-    const dx = ev.screenX - lastX
-    const dy = ev.screenY - lastY
-    if (!hasMoved && Math.abs(dx) + Math.abs(dy) > 4) hasMoved = true
-    lastX = ev.screenX
-    lastY = ev.screenY
-    if (hasMoved) await window.electronAPI?.dragWindow({ mouseX: dx, mouseY: dy })
+    totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
+    if (!hasMoved && totalMoved > 6) hasMoved = true
+    if (hasMoved) await window.electronAPI?.dragWindow({ mouseX: ev.movementX, mouseY: ev.movementY })
   }
 
   const onUp = () => {

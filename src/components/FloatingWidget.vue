@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import MiniButton from './MiniButton.vue'
 import WidgetHeader from './WidgetHeader.vue'
 import TaskList from './TaskList.vue'
@@ -72,7 +72,16 @@ function closeForm() {
   editingTask.value = null
 }
 
-// ── 四周拖拽调整大小 ──────────────────────────────────
+// 失焦自动折叠（弹窗打开时不折叠）
+onMounted(() => {
+  window.electronAPI?.onWindowBlur(() => {
+    if (!collapsed.value && !showForm.value && !showSettings.value) {
+      collapse()
+    }
+  })
+})
+
+// ── 四周拖拽调整大小（使用 movementX/Y，无坐标系差异）─────────────
 async function startResize(dir, e) {
   if (e.button !== 0) return
   e.preventDefault()
@@ -80,38 +89,37 @@ async function startResize(dir, e) {
   const api = window.electronAPI
   if (!api) return
 
-  const initBounds = await api.getBounds()
-  const initMouseX  = e.screenX
-  const initMouseY  = e.screenY
   const MIN_W = 280
   const MIN_H = 360
 
-  const onMove = async (ev) => {
-    const dx = ev.screenX - initMouseX
-    const dy = ev.screenY - initMouseY
+  // 以当前实际 bounds 为起点，增量更新
+  let cur = await api.getBounds()
 
-    let { x, y, width, height } = initBounds
+  const onMove = async (ev) => {
+    let { x, y, width, height } = cur
+    const dx = ev.movementX
+    const dy = ev.movementY
 
     if (dir.includes('e')) width  = Math.max(MIN_W, width  + dx)
     if (dir.includes('s')) height = Math.max(MIN_H, height + dy)
     if (dir.includes('w')) {
-      const newW = Math.max(MIN_W, width - dx)
-      x = x + (width - newW)
-      width = newW
+      const nw = Math.max(MIN_W, width - dx)
+      x += width - nw
+      width = nw
     }
     if (dir.includes('n')) {
-      const newH = Math.max(MIN_H, height - dy)
-      y = y + (height - newH)
-      height = newH
+      const nh = Math.max(MIN_H, height - dy)
+      y += height - nh
+      height = nh
     }
 
-    await api.resizeWindow({ x, y, width, height })
+    cur = { x, y, width, height }
+    await api.resizeWindow(cur)
   }
 
   const onUp = async () => {
     window.removeEventListener('mousemove', onMove)
     window.removeEventListener('mouseup', onUp)
-    // 保存新尺寸
     const b = await api.getBounds()
     await api.saveWindowSize({ width: b.width, height: b.height })
   }
