@@ -151,10 +151,15 @@ ipcMain.handle('tasks:save', (_, data) => {
 })
 
 ipcMain.handle('window:collapse', () => {
+  console.log('[main] collapse IPC called')
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
   collapsedPos = mainWindow.getPosition()
+  const before = mainWindow.getSize()
+  console.log('[main] before setSize:', before)
   mainWindow.setSize(MINI_SIZE, MINI_SIZE)
+  const after = mainWindow.getSize()
+  console.log('[main] after setSize:', after)
 })
 
 ipcMain.handle('window:expand', () => {
