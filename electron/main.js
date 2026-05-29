@@ -98,6 +98,12 @@ function createWindow() {
     checkDeadlines(data)
   })
 
+  // 禁止页面缩放（防止 Ctrl+滚轮 / 触控板捏合导致窗口内容"越来越大"）
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.setZoomFactor(1.0)
+    mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
+  })
+
   mainWindow.on('moved', () => {
     const [wx, wy] = mainWindow.getPosition()
     const d = loadData()
@@ -170,9 +176,28 @@ ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
   mainWindow.setPosition(wx + mouseX, wy + mouseY)
 })
 
-// 让渲染进程通知主进程哪些区域应忽略鼠标事件
 ipcMain.handle('window:ignoreMouseEvents', (_, ignore) => {
   mainWindow.setIgnoreMouseEvents(ignore, { forward: true })
+})
+
+ipcMain.handle('window:getBounds', () => mainWindow.getBounds())
+
+ipcMain.handle('window:resize', (_, bounds) => {
+  const MIN_W = 280
+  const MIN_H = 360
+  const b = {
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width:  Math.round(Math.max(MIN_W, bounds.width)),
+    height: Math.round(Math.max(MIN_H, bounds.height)),
+  }
+  mainWindow.setBounds(b)
+})
+
+ipcMain.handle('window:saveSize', (_, { width, height }) => {
+  const d = loadData()
+  d.settings.windowSize = { width, height }
+  saveData(d)
 })
 
 app.whenReady().then(() => {
