@@ -180,6 +180,11 @@ ipcMain.handle('window:expand', () => {
 })
 
 // 调整大小：完全在主进程处理，避免渲染进程 DPI 转换问题
+ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
+  const [wx, wy] = mainWindow.getPosition()
+  mainWindow.setPosition(wx + mouseX, wy + mouseY)
+})
+
 ipcMain.handle('window:startResize', (_, dir) => {
   const initBounds = mainWindow.getBounds()
   const initMouse = screen.getCursorScreenPoint()
