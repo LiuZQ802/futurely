@@ -86,9 +86,7 @@ function createWindow() {
   })
 
   // Windows 11 Acrylic 毛玻璃（展开态才开启，折叠时关闭避免方形残影）
-  if (mainWindow.setBackgroundMaterial) {
-    mainWindow.setBackgroundMaterial('acrylic')
-  }
+  try { mainWindow.setBackgroundMaterial?.('acrylic') } catch (e) {}
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
@@ -154,17 +152,16 @@ ipcMain.handle('tasks:save', (_, data) => {
 })
 
 ipcMain.handle('window:collapse', () => {
-  // 强制停止任何正在进行的 resize，避免 timer 持续改大小
-  if (resizeTimer) {
-    clearInterval(resizeTimer)
-    resizeTimer = null
-  }
+  if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
 
   collapsedPos = mainWindow.getPosition()
   const display = screen.getPrimaryDisplay().workAreaSize
-  if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('none')
-  mainWindow.setMinimumSize(1, 1)
+
+  // 安全关闭 acrylic（某些 Windows 版本可能抛异常）
+  try { mainWindow.setBackgroundMaterial?.('none') } catch (e) {}
+  try { mainWindow.setMinimumSize(1, 1) } catch (e) {}
+
   mainWindow.setBounds({
     x: display.width - MINI_SIZE - 16,
     y: display.height - MINI_SIZE - 16,
@@ -183,7 +180,7 @@ ipcMain.handle('window:expand', () => {
   collapsedPos = null
 
   mainWindow.setBounds({ x, y, width, height })
-  if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('acrylic')
+  try { mainWindow.setBackgroundMaterial?.('acrylic') } catch (e) {}
 })
 
 // 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
