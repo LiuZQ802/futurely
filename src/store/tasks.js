@@ -17,8 +17,11 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks.value.filter((t) => t.status !== 'done')
   )
 
+  const api = window.electronAPI
+
   async function load() {
-    const data = await window.electronAPI.loadData()
+    if (!api) return
+    const data = await api.loadData()
     tasks.value = data.tasks ?? []
     assignees.value = data.assignees ?? ['自己']
     tags.value = data.tags ?? ['工作', '个人']
@@ -26,7 +29,8 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   async function persist() {
-    await window.electronAPI.saveData({
+    if (!api) return
+    await api.saveData({
       tasks: tasks.value,
       assignees: assignees.value,
       tags: tags.value,

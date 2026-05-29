@@ -40,7 +40,7 @@ function startDrag(e) {
     const dy = ev.screenY - lastY
     lastX = ev.screenX
     lastY = ev.screenY
-    await window.electronAPI.dragWindow({ mouseX: dx, mouseY: dy })
+    await window.electronAPI?.dragWindow({ mouseX: dx, mouseY: dy })
   }
 
   const onUp = () => {

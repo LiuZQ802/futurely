@@ -4,7 +4,7 @@
   "description": "桌面任务清单",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
     "build": "vite build",
     "electron": "electron .",
     "pack": "vite build && electron-builder"

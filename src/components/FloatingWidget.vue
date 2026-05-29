@@ -43,12 +43,12 @@ const editingTask = ref(null)
 
 async function collapse() {
   collapsed.value = true
-  await window.electronAPI.collapseWindow()
+  await window.electronAPI?.collapseWindow()
 }
 
 async function expand() {
   collapsed.value = false
-  await window.electronAPI.expandWindow()
+  await window.electronAPI?.expandWindow()
 }
 
 function openEdit(task) {
