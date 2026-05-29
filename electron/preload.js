@@ -1,4 +1,6 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, screen } = require('electron')
+
+contextBridge.exposeInMainWorld('screenScale', screen.getPrimaryDisplay().scaleFactor)
 
 contextBridge.exposeInMainWorld('electronAPI', {
   loadData:          ()       => ipcRenderer.invoke('tasks:load'),

@@ -154,6 +154,13 @@ ipcMain.handle('tasks:save', (_, data) => {
 })
 
 ipcMain.handle('window:collapse', () => {
+  // 强制停止任何正在进行的 resize，避免 timer 持续改大小
+  if (resizeTimer) {
+    clearInterval(resizeTimer)
+    resizeTimer = null
+  }
+  resizeState = null
+
   collapsedPos = mainWindow.getPosition()
   const display = screen.getPrimaryDisplay().workAreaSize
   if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('none')
@@ -179,10 +186,15 @@ ipcMain.handle('window:expand', () => {
   if (mainWindow.setBackgroundMaterial) mainWindow.setBackgroundMaterial('acrylic')
 })
 
-// 调整大小：完全在主进程处理，避免渲染进程 DPI 转换问题
+// 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
 ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
-  const [wx, wy] = mainWindow.getPosition()
-  mainWindow.setPosition(wx + mouseX, wy + mouseY)
+  const b = mainWindow.getBounds()
+  mainWindow.setBounds({
+    x: b.x + mouseX,
+    y: b.y + mouseY,
+    width: b.width,
+    height: b.height,
+  })
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {

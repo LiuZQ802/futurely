@@ -18,11 +18,15 @@ function onMouseDown(e) {
   let totalMoved = 0
   let hasMoved = false
 
+  const scale = window.screenScale || 1
   const onMove = async (ev) => {
     totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
     if (!hasMoved && totalMoved > 6) hasMoved = true
     if (hasMoved) {
-      await window.electronAPI?.dragWindow({ mouseX: ev.movementX, mouseY: ev.movementY })
+      await window.electronAPI?.dragWindow({
+        mouseX: Math.round(ev.movementX / scale),
+        mouseY: Math.round(ev.movementY / scale),
+      })
     }
   }
 
