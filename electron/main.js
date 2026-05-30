@@ -57,7 +57,7 @@ function checkDeadlines(data) {
   })
 }
 
-function createWindow() {
+async function createWindow() {
   const data = loadData()
   const { width, height } = data.settings.windowSize
   const display = screen.getPrimaryDisplay().workAreaSize
@@ -75,7 +75,7 @@ function createWindow() {
     hasShadow: false,
     alwaysOnTop: true,
     resizable: false,
-    maximizable: false,   // 禁用双击最大化（drag 区域双击会触发）
+    maximizable: false,
     skipTaskbar: false,
     show: false,
     webPreferences: {
@@ -85,10 +85,23 @@ function createWindow() {
     },
   })
 
-  // 不用 setBackgroundMaterial，靠 CSS backdrop-filter 实现毛玻璃
-
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
+    // 轮询等待 Vite 开发服务器就绪（最多等 15 秒）
+    let loaded = false
+    for (let i = 0; i < 30; i++) {
+      try {
+        await mainWindow.loadURL('http://localhost:5173')
+        loaded = true
+        break
+      } catch (e) {
+        await new Promise(r => setTimeout(r, 500))
+      }
+    }
+    if (!loaded) {
+      console.error('[main] 无法连接 Vite 开发服务器')
+      app.quit()
+      return
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -151,15 +164,10 @@ ipcMain.handle('tasks:save', (_, data) => {
 })
 
 ipcMain.handle('window:collapse', () => {
-  console.log('[main] collapse IPC called')
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
   collapsedPos = mainWindow.getPosition()
-  const before = mainWindow.getSize()
-  console.log('[main] before setSize:', before)
   mainWindow.setSize(MINI_SIZE, MINI_SIZE)
-  const after = mainWindow.getSize()
-  console.log('[main] after setSize:', after)
 })
 
 ipcMain.handle('window:expand', () => {
@@ -223,8 +231,8 @@ ipcMain.handle('window:stopResize', () => {
   return { width: b.width, height: b.height }
 })
 
-app.whenReady().then(() => {
-  createWindow()
+app.whenReady().then(async () => {
+  await createWindow()
   createTray()
 })
 
