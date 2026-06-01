@@ -111,8 +111,8 @@ function addTag() {
 }
 
 .panel {
-  background: #162036;
-  border: 1px solid rgba(255,255,255,0.20);
+  background: #0f1b30;
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: var(--radius);
   width: 90%;
   max-height: 80vh;
@@ -152,7 +152,7 @@ function addTag() {
 }
 
 section h4 {
-  color: #90afd4;
+  color: #7eb8e8;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -211,8 +211,8 @@ section h4 {
 
 .add-row input {
   flex: 1;
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.25);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 12px;

@@ -1,32 +1,35 @@
 :root {
-  --bg-base:       rgba(15, 20, 40, 0.82);
-  --bg-card:       rgba(255, 255, 255, 0.07);
-  --bg-card-hover: rgba(255, 255, 255, 0.13);
-  --border:        rgba(255, 255, 255, 0.16);
-  --border-focus:  rgba(99, 102, 241, 0.8);
+  /* 主窗口背景 - 更深更不透明，防止背景干扰阅读 */
+  --bg-base:       rgba(8, 14, 30, 0.93);
+  --bg-card:       rgba(255, 255, 255, 0.08);
+  --bg-card-hover: rgba(255, 255, 255, 0.14);
+  --border:        rgba(255, 255, 255, 0.18);
+  --border-focus:  #6366f1;
 
-  --text-primary:   #f0f6ff;
-  --text-secondary: #a8bcd4;
+  /* 文字 - 纯白主文字，确保最高可读性 */
+  --text-primary:   #ffffff;
+  --text-secondary: #b8cfe8;
   --text-muted:     #6b82a0;
 
   --accent:       #6366f1;
   --accent-hover: #818cf8;
 
-  --priority-urgent: #ef4444;
-  --priority-high:   #f59e0b;
-  --priority-medium: #3b82f6;
-  --priority-low:    #64748b;
+  /* 优先级颜色 - 更饱和 */
+  --priority-urgent: #f87171;
+  --priority-high:   #fbbf24;
+  --priority-medium: #60a5fa;
+  --priority-low:    #94a3b8;
 
-  --priority-urgent-bg: rgba(239,68,68,0.15);
-  --priority-high-bg:   rgba(245,158,11,0.13);
-  --priority-medium-bg: rgba(59,130,246,0.13);
-  --priority-low-bg:    rgba(100,116,139,0.10);
+  --priority-urgent-bg: rgba(248,113,113,0.18);
+  --priority-high-bg:   rgba(251,191,36,0.15);
+  --priority-medium-bg: rgba(96,165,250,0.15);
+  --priority-low-bg:    rgba(148,163,184,0.10);
 
-  --status-todo:       #64748b;
-  --status-inprogress: #3b82f6;
-  --status-done:       #22c55e;
+  --status-todo:       #94a3b8;
+  --status-inprogress: #60a5fa;
+  --status-done:       #4ade80;
 
-  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+  --shadow:    0 4px 28px rgba(0,0,0,0.55);
   --radius:    12px;
   --radius-sm: 7px;
 }
@@ -45,4 +48,4 @@ input, textarea, select { user-select: text; font-family: inherit; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }

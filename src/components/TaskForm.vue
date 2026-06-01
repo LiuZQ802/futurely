@@ -133,7 +133,7 @@ function remove() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -142,15 +142,15 @@ function remove() {
 }
 
 .form-panel {
-  background: #162036;
-  border: 1px solid rgba(255,255,255,0.20);
+  background: #0f1b30;
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: var(--radius);
   width: 90%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.65);
+  box-shadow: 0 16px 56px rgba(0,0,0,0.7);
 }
 
 .form-header {
@@ -204,18 +204,18 @@ function remove() {
 }
 
 label {
-  color: #90afd4;
+  color: #7eb8e8;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 input, select, textarea {
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.25);
   border-radius: 6px;
-  color: #eef4ff;
+  color: #ffffff;
   font-size: 12px;
   padding: 7px 9px;
   outline: none;
@@ -223,13 +223,18 @@ input, select, textarea {
   width: 100%;
 }
 
-input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.3); }
+input:focus, select:focus, textarea:focus {
+  border-color: #6366f1;
+  background: rgba(255,255,255,0.13);
+}
+
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.35); }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
 }
 
-select option { background: #162036; color: #eef4ff; }
+select option { background: #0f1b30; color: #ffffff; }
 
 textarea { resize: none; }
 

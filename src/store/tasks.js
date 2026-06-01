@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 
 export const useTaskStore = defineStore('tasks', () => {
@@ -31,12 +31,14 @@ export const useTaskStore = defineStore('tasks', () => {
 
   async function persist() {
     if (!api()) return
-    await api().saveData({
-      tasks: tasks.value,
-      assignees: assignees.value,
-      tags: tags.value,
-      settings: settings.value,
-    })
+    // Vue Proxy 对象无法被 IPC Structured Clone 序列化，必须转换为纯对象
+    const plain = JSON.parse(JSON.stringify({
+      tasks: toRaw(tasks.value),
+      assignees: toRaw(assignees.value),
+      tags: toRaw(tags.value),
+      settings: toRaw(settings.value),
+    }))
+    await api().saveData(plain)
   }
 
   function addTask(task) {
