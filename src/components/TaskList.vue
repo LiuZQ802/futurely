@@ -93,15 +93,16 @@ const filtered = computed(() => {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 12px 6px;
+  gap: 5px;
+  padding: 8px 12px 7px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--layer1-border);
 }
 
 .filter-btn {
-  background: #1a2840;
-  border: 1.5px solid #3d5878;
-  color: #8ab0d0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 12px;
@@ -111,22 +112,21 @@ const filtered = computed(() => {
   font-weight: 500;
 }
 .filter-btn:hover {
-  color: #ddeeff;
-  border-color: #5a80a8;
-  background: #1f3050;
+  color: var(--t1);
+  border-color: var(--accent);
 }
 .filter-btn.active {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #6366f1;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
   font-weight: 600;
 }
 
 .tag-select {
   margin-left: auto;
-  background: #1a2840;
-  border: 1.5px solid #3d5878;
-  color: #8ab0d0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 8px;
@@ -134,8 +134,8 @@ const filtered = computed(() => {
   outline: none;
   font-family: inherit;
 }
-.tag-select:focus { border-color: #818cf8; }
-.tag-select option { background: #1a2840; color: #e8f0fb; }
+.tag-select:focus { border-color: var(--accent); }
+.tag-select option { background: var(--layer3); color: var(--t1); }
 
 .list {
   flex: 1;

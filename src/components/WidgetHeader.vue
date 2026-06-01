@@ -27,11 +27,12 @@ const activeCount = computed(() => store.activeTasks.length)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 10px;
+  padding: 11px 14px 10px;
   cursor: grab;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--layer1-border);
+  background: var(--layer2-header);
   flex-shrink: 0;
-  -webkit-app-region: drag;   /* Electron 原生拖拽，无 DPI 问题 */
+  -webkit-app-region: drag;
 }
 
 .left {
@@ -41,32 +42,34 @@ const activeCount = computed(() => store.activeTasks.length)
 }
 
 .title {
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--t1);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .count {
-  background: var(--accent);
-  color: white;
+  background: var(--accent-dim);
+  color: var(--accent-hover);
   font-size: 10px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 10px;
+  border: 1px solid var(--accent-dim);
 }
 
 .actions {
   display: flex;
-  gap: 4px;
-  -webkit-app-region: no-drag;  /* 按钮区域不可拖拽，确保可点击 */
+  gap: 2px;
+  -webkit-app-region: no-drag;
 }
 
 .btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--t2);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
   width: 26px;
   height: 26px;
   border-radius: 6px;
@@ -79,7 +82,7 @@ const activeCount = computed(() => store.activeTasks.length)
 }
 
 .btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
+  background: var(--layer1-hover);
+  color: var(--t1);
 }
 </style>

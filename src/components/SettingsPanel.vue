@@ -111,8 +111,8 @@ function addTag() {
 }
 
 .panel {
-  background: #243147;
-  border: 1px solid #4a6080;
+  background: var(--layer2);
+  border: 1px solid var(--layer2-border);
   border-radius: var(--radius);
   width: 90%;
   max-height: 80vh;
@@ -126,9 +126,9 @@ function addTag() {
   justify-content: space-between;
   align-items: center;
   padding: 11px 14px;
-  border-bottom: 1px solid #3a5070;
-  background: #1c2a3e;
-  color: #e2eaf6;
+  border-bottom: 1px solid var(--layer2-border);
+  background: var(--layer2-header);
+  color: var(--t1);
   font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
@@ -156,7 +156,7 @@ function addTag() {
 }
 
 section h4 {
-  color: #a8c4e0;
+  color: var(--t2);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -190,9 +190,9 @@ section h4 {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #1a2840;
-  border: 1.5px solid #3d5878;
-  color: #a8c4e0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t1);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 12px;
@@ -213,18 +213,18 @@ section h4 {
 
 .add-row input {
   flex: 1;
-  background: #1a2840;
-  border: 1.5px solid #3d5878;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
   border-radius: 6px;
-  color: #e8f0fb;
+  color: var(--t1);
   font-size: 12px;
   padding: 6px 9px;
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.add-row input::placeholder { color: #4a6480; }
-.add-row input:focus { border-color: #818cf8; }
+.add-row input::placeholder { color: var(--t3); }
+.add-row input:focus { border-color: var(--accent); }
 
 .btn-add {
   background: var(--accent);

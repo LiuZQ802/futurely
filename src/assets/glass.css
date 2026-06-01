@@ -1,39 +1,56 @@
+/* ═══════════════════════════════════════════════
+   DesktopList 统一设计变量
+   三层深度：Layer0（最深）→ Layer1（卡片）→ Layer2（弹窗）
+   ═══════════════════════════════════════════════ */
 :root {
-  /* ── 主窗口 ── */
-  --bg-base:       rgba(12, 20, 38, 0.88);
-  --bg-card:       #1e2d45;
-  --bg-card-hover: #253550;
-  --border:        rgba(148, 163, 184, 0.18); /* slate-400 淡边框 */
-  --border-focus:  #818cf8;                   /* indigo-400 */
+  /* Layer 0 — 主窗口背景 */
+  --layer0:        rgba(8, 12, 24, 0.90);
 
-  /* ── 文字：slate 色系，层次清晰 ── */
-  --text-primary:   #f1f5f9;  /* slate-100 — 主文字，柔和不刺眼 */
-  --text-secondary: #94a3b8;  /* slate-400 — 次要文字 */
-  --text-muted:     #475569;  /* slate-600 — 提示文字 */
+  /* Layer 1 — 卡片 / 列表项 */
+  --layer1:        #14213d;
+  --layer1-hover:  #1a2a4e;
+  --layer1-border: #2a3f60;
+
+  /* Layer 2 — 弹窗面板 */
+  --layer2:        #1c2f4a;
+  --layer2-header: #152338;
+  --layer2-border: #3a5472;
+
+  /* Layer 3 — 输入框（最深，在 Layer2 内） */
+  --layer3:        #0d1928;
+  --layer3-border: #2e4560;
+
+  /* ── 文字 ── */
+  --t1: #eef3ff;   /* 主文字：亮蓝白 */
+  --t2: #90aac8;   /* 次要文字 */
+  --t3: #4a6480;   /* 提示/禁用 */
 
   /* ── 强调色 ── */
-  --accent:       #818cf8;  /* indigo-400 */
-  --accent-hover: #a5b4fc;  /* indigo-300 */
+  --accent:       #7c8ffa;
+  --accent-hover: #a5b4fc;
+  --accent-dim:   rgba(124,143,250,0.2);
 
-  /* ── 优先级 — 饱和度适中，深色背景上清晰可辨 ── */
-  --priority-urgent: #f87171;  /* red-400    */
-  --priority-high:   #fbbf24;  /* amber-400  */
-  --priority-medium: #60a5fa;  /* blue-400   */
-  --priority-low:    #94a3b8;  /* slate-400  */
+  /* ── 优先级（高饱和，深背景上清晰可见）── */
+  --p-urgent:     #ff7070;
+  --p-high:       #ffc94d;
+  --p-medium:     #5fb8ff;
+  --p-low:        #7a95b0;
 
-  --priority-urgent-bg: rgba(248, 113, 113, 0.15);
-  --priority-high-bg:   rgba(251, 191,  36, 0.12);
-  --priority-medium-bg: rgba( 96, 165, 250, 0.12);
-  --priority-low-bg:    rgba(148, 163, 184, 0.08);
+  --p-urgent-bg:  rgba(255,112,112,0.15);
+  --p-high-bg:    rgba(255,201, 77,0.12);
+  --p-medium-bg:  rgba( 95,184,255,0.12);
+  --p-low-bg:     rgba(122,149,176,0.10);
 
   /* ── 状态色 ── */
-  --status-todo:       #64748b;  /* slate-500  */
-  --status-inprogress: #60a5fa;  /* blue-400   */
-  --status-done:       #4ade80;  /* green-400  */
+  --s-todo:       #5a7a98;
+  --s-doing:      #5fb8ff;
+  --s-done:       #50d890;
 
-  --shadow:    0 4px 24px rgba(0,0,0,0.50);
+  /* ── 通用 ── */
   --radius:    12px;
   --radius-sm: 7px;
+  --shadow:    0 6px 32px rgba(0,0,0,0.55);
+  --border:    var(--layer1-border);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,10 +61,17 @@ html, body {
   -webkit-font-smoothing: antialiased;
   user-select: none;
   overflow: hidden;
+  color: var(--t1);
+  font-size: 13px;
 }
 
-input, textarea, select { user-select: text; font-family: inherit; }
+input, textarea, select {
+  user-select: text;
+  font-family: inherit;
+  color: var(--t1);
+}
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--layer1-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #3a5a7a; }

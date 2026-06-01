@@ -143,8 +143,8 @@ function remove() {
 
 /* 表单面板：中亮蓝灰，明显区别于主窗口深色 */
 .form-panel {
-  background: #243147;
-  border: 1px solid #4a6080;
+  background: var(--layer2);
+  border: 1px solid var(--layer2-border);
   border-radius: var(--radius);
   width: 90%;
   max-height: 85vh;
@@ -159,9 +159,9 @@ function remove() {
   justify-content: space-between;
   align-items: center;
   padding: 11px 14px;
-  border-bottom: 1px solid #3a5070;
-  background: #1c2a3e;
-  color: #e2eaf6;
+  border-bottom: 1px solid var(--layer2-border);
+  background: var(--layer2-header);
+  color: var(--t1);
   font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
@@ -193,7 +193,7 @@ function remove() {
 .sub-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
 
 label {
-  color: #a8c4e0;     /* 亮蓝灰 — 清晰可见 */
+  color: var(--t2);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -201,23 +201,20 @@ label {
 }
 
 input, select, textarea {
-  background: #1a2840;   /* 比面板深一级 */
-  border: 1.5px solid #3d5878;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
   border-radius: 6px;
-  color: #e8f0fb;         /* 亮白蓝 */
+  color: var(--t1);
   font-size: 12px;
   padding: 7px 10px;
   outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s;
   width: 100%;
 }
-input:focus, select:focus, textarea:focus {
-  border-color: #818cf8;
-  background: #1f3050;
-}
-input::placeholder, textarea::placeholder { color: #4a6480; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--t3); }
 
-select option { background: #1a2840; color: #e8f0fb; }
+select option { background: var(--layer3); color: var(--t1); }
 textarea { resize: none; }
 
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -226,17 +223,17 @@ textarea { resize: none; }
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 12px;
-  background: #1a2840;
-  border: 1.5px solid #3d5878;
-  color: #8ab0d0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
   cursor: pointer;
   transition: all 0.15s;
 }
-.tag-chip:hover { border-color: #818cf8; color: #c4b5fd; }
+.tag-chip:hover { border-color: var(--accent); color: var(--accent-hover); }
 .tag-chip.active {
-  background: rgba(129,140,248,0.2);
-  border-color: #818cf8;
-  color: #c4b5fd;
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .form-footer {
@@ -244,8 +241,8 @@ textarea { resize: none; }
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  border-top: 1px solid #3a5070;
-  background: #1c2a3e;
+  border-top: 1px solid var(--layer2-border);
+  background: var(--layer2-header);
   flex-shrink: 0;
 }
 .footer-right { display: flex; gap: 8px; }

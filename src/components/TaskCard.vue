@@ -1,10 +1,9 @@
 <template>
   <div
     class="card"
-    :class="[`priority-${task.priority}`, { done: task.status === 'done' }]"
+    :class="[`p-${task.priority}`, { done: task.status === 'done' }]"
     @click="$emit('edit')"
   >
-    <!-- 状态切换按钮 -->
     <button
       class="status-btn"
       :class="`s-${task.status}`"
@@ -12,19 +11,15 @@
       @click.stop="store.cycleStatus(task.id)"
     >{{ statusIcon }}</button>
 
-    <div class="card-body">
-      <div class="title-row">
+    <div class="body">
+      <div class="top">
         <span class="title">{{ task.title }}</span>
-        <span class="priority-tag" :class="`p-${task.priority}`">{{ priorityLabel }}</span>
+        <span class="ptag" :class="`pt-${task.priority}`">{{ priorityLabel }}</span>
       </div>
       <div class="meta">
-        <span v-if="task.deadline" class="deadline" :class="deadlineClass">
-          📅 {{ formatDeadline(task.deadline) }}
-        </span>
-        <span v-if="task.assignee && task.assignee !== '自己'" class="assignee">
-          👤 {{ task.assignee }}
-        </span>
-        <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
+        <span v-if="task.deadline" class="dl" :class="dlClass">📅 {{ fmtDeadline(task.deadline) }}</span>
+        <span v-if="task.assignee && task.assignee !== '自己'" class="who">👤 {{ task.assignee }}</span>
+        <span v-for="t in task.tags" :key="t" class="tag">{{ t }}</span>
       </div>
     </div>
   </div>
@@ -38,102 +33,84 @@ const props = defineProps({ task: Object })
 defineEmits(['edit'])
 const store = useTaskStore()
 
-const priorityMap = { urgent: '紧急', high: '高', medium: '中', low: '低' }
-const statusMap   = { todo: '待办', inprogress: '进行中', done: '已完成' }
-const statusIcons = { todo: '○', inprogress: '◑', done: '●' }
+const PLABEL = { urgent:'紧急', high:'高', medium:'中', low:'低' }
+const SLABEL = { todo:'待办', inprogress:'进行中', done:'已完成' }
+const SICON  = { todo:'○', inprogress:'◑', done:'●' }
 
-const priorityLabel = computed(() => priorityMap[props.task.priority] ?? '中')
-const statusLabel   = computed(() => statusMap[props.task.status] ?? '待办')
-const statusIcon    = computed(() => statusIcons[props.task.status] ?? '○')
+const priorityLabel = computed(() => PLABEL[props.task.priority] ?? '中')
+const statusLabel   = computed(() => SLABEL[props.task.status] ?? '待办')
+const statusIcon    = computed(() => SICON[props.task.status]  ?? '○')
 
-function formatDeadline(d) {
+function fmtDeadline(d) {
   const today = new Date(); today.setHours(0,0,0,0)
   const date  = new Date(d); date.setHours(0,0,0,0)
-  const diff  = Math.round((date - today) / 86400000)
-  if (diff < 0)   return `逾期${-diff}天`
-  if (diff === 0) return '今天截止'
-  if (diff === 1) return '明天'
-  if (diff <= 7)  return `${diff}天后`
+  const n = Math.round((date - today) / 86400000)
+  if (n < 0)   return `逾期${-n}天`
+  if (n === 0) return '今天截止'
+  if (n === 1) return '明天'
+  if (n <= 7)  return `${n}天后`
   return d.slice(5).replace('-', '/')
 }
 
-const deadlineClass = computed(() => {
+const dlClass = computed(() => {
   if (!props.task.deadline) return ''
   const today = new Date(); today.setHours(0,0,0,0)
   const date  = new Date(props.task.deadline); date.setHours(0,0,0,0)
-  const diff  = Math.round((date - today) / 86400000)
-  if (diff < 0)  return 'overdue'
-  if (diff <= 1) return 'warn'
-  return ''
+  const n = Math.round((date - today) / 86400000)
+  return n < 0 ? 'overdue' : n <= 1 ? 'warn' : ''
 })
 </script>
 
 <style scoped>
-/* ── 卡片基础 ── */
 .card {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  padding: 9px 11px;
-  border-radius: 8px;
-  border-left: 3px solid transparent;
-  background: #1e2d45;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--layer1);
+  border: 1px solid var(--layer1-border);
+  border-left: 3px solid var(--layer1-border);
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.card:hover {
-  background: #253550;
-  transform: translateX(1px);
-}
+.card:hover { background: var(--layer1-hover); }
 
-/* 优先级左边框 + 背景着色 */
-.priority-urgent { border-left-color: #f87171; background: #28202a; }
-.priority-urgent:hover { background: #30263200; }
-.priority-urgent { background: #261e2e; }
-.priority-urgent:hover { background: #2e2436; }
+/* 优先级左边框 + 轻微背景色 */
+.p-urgent { border-left-color: var(--p-urgent);  background: #1f1828; }
+.p-urgent:hover { background: #241c30; }
+.p-high   { border-left-color: var(--p-high);   background: #1e1e16; }
+.p-high:hover   { background: #23231c; }
+.p-medium { border-left-color: var(--p-medium); background: #131f30; }
+.p-medium:hover { background: #182538; }
+.p-low    { border-left-color: var(--p-low);    background: var(--layer1); }
 
-.priority-high   { border-left-color: #fbbf24; background: #26241a; }
-.priority-high:hover { background: #2e2c20; }
+.card.done { opacity: 0.45; }
+.card.done .title { text-decoration: line-through; color: var(--t3); }
 
-.priority-medium { border-left-color: #60a5fa; background: #1a2538; }
-.priority-medium:hover { background: #1f2d44; }
-
-.priority-low    { border-left-color: #64748b; background: #1a2230; }
-.priority-low:hover { background: #1f2938; }
-
-.card.done { opacity: 0.5; }
-.card.done .title { text-decoration: line-through; color: #7a9ab8; }
-
-/* ── 状态按钮 ── */
+/* 状态按钮 */
 .status-btn {
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
+  width: 22px; height: 22px; min-width: 22px;
   border-radius: 50%;
   border: 2px solid currentColor;
   background: transparent;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0;
-  margin-top: 1px;
-  transition: transform 0.15s, opacity 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; line-height: 1;
+  padding: 0; margin-top: 1px;
   font-family: inherit;
+  transition: transform 0.15s;
 }
-.status-btn:hover { transform: scale(1.25); opacity: 0.85; }
+.status-btn:hover { transform: scale(1.25); }
 
-.s-todo       { color: #64748b; }
-.s-inprogress { color: #60a5fa; background: rgba(96,165,250,0.18); }
-.s-done       { color: #4ade80; background: rgba(74,222,128,0.18); }
+.s-todo       { color: var(--s-todo); }
+.s-inprogress { color: var(--s-doing); background: rgba(95,184,255,0.15); }
+.s-done       { color: var(--s-done);  background: rgba(80,216,144,0.15); }
 
-/* ── 卡片内容 ── */
-.card-body { flex: 1; min-width: 0; }
+/* 卡片内容 */
+.body { flex: 1; min-width: 0; }
 
-.title-row {
+.top {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,7 +119,7 @@ const deadlineClass = computed(() => {
 }
 
 .title {
-  color: #ddeeff;
+  color: var(--t1);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -151,39 +128,30 @@ const deadlineClass = computed(() => {
 }
 
 /* 优先级标签 */
-.priority-tag {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  letter-spacing: 0.3px;
+.ptag {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px;
+  flex-shrink: 0; letter-spacing: 0.3px;
 }
-.p-urgent { background: rgba(248,113,113,0.25); color: #fca5a5; border: 1px solid rgba(248,113,113,0.4); }
-.p-high   { background: rgba(251,191, 36,0.20); color: #fde68a; border: 1px solid rgba(251,191,36,0.4);  }
-.p-medium { background: rgba( 96,165,250,0.20); color: #93c5fd; border: 1px solid rgba(96,165,250,0.4);  }
-.p-low    { background: rgba(100,116,139,0.20); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+.pt-urgent { background: rgba(255,112,112,0.22); color: var(--p-urgent); border: 1px solid rgba(255,112,112,0.35); }
+.pt-high   { background: rgba(255,201, 77,0.18); color: var(--p-high);   border: 1px solid rgba(255,201,77,0.35);  }
+.pt-medium { background: rgba( 95,184,255,0.18); color: var(--p-medium); border: 1px solid rgba(95,184,255,0.35);  }
+.pt-low    { background: rgba(122,149,176,0.15); color: var(--p-low);    border: 1px solid rgba(122,149,176,0.3);  }
 
-/* ── meta 信息 ── */
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
+/* meta */
+.meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
 
-.deadline { font-size: 10px; color: #7a9ab8; }
-.deadline.warn   { color: #fb923c; font-weight: 600; }
-.deadline.overdue { color: #f87171; font-weight: 600; }
+.dl   { font-size: 10px; color: var(--t2); }
+.dl.warn   { color: var(--p-high); font-weight: 600; }
+.dl.overdue { color: var(--p-urgent); font-weight: 600; }
 
-.assignee { font-size: 10px; color: #7a9ab8; }
+.who  { font-size: 10px; color: var(--t2); }
 
 .tag {
   font-size: 10px;
-  background: rgba(129,140,248,0.2);
-  color: #c4b5fd;
-  padding: 1px 6px;
-  border-radius: 8px;
-  border: 1px solid rgba(129,140,248,0.3);
+  background: var(--accent-dim);
+  color: var(--accent-hover);
+  padding: 1px 6px; border-radius: 8px;
+  border: 1px solid rgba(124,143,250,0.3);
 }
 </style>
