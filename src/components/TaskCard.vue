@@ -21,6 +21,7 @@
         <span v-if="task.assignee && task.assignee !== '自己'" class="who">👤 {{ task.assignee }}</span>
         <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
       </div>
+      <div v-if="task.notes" class="notes-preview">{{ task.notes }}</div>
     </div>
   </div>
 </template>
@@ -155,6 +156,20 @@ const dlClass = computed(() => {
 .dl.warn     { color: var(--p-high);   font-weight: 600; }
 .dl.overdue  { color: var(--p-urgent); font-weight: 600; }
 .who         { font-size: 11px; color: var(--t2); }
+
+/* 备注预览：默认隐藏，hover 时展开 */
+.notes-preview {
+  display: none;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid var(--layer1-border);
+  font-size: 11.5px;
+  color: var(--t2);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.card:hover .notes-preview { display: block; }
 .tag {
   font-size: 11px;
   background: var(--accent-dim);

@@ -15,4 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   snapToNearest:    ()    => ipcRenderer.invoke('window:snapToNearest'),
   unsnap:           ()    => ipcRenderer.invoke('window:unsnap'),
   toggleAutoHide:   ()    => ipcRenderer.invoke('window:toggleAutoHide'),
+  // 应用信息 / 更新
+  getVersion:       ()    => ipcRenderer.invoke('app:version'),
+  checkUpdate:      ()    => ipcRenderer.invoke('app:checkUpdate'),
+  openUrl:          (url) => ipcRenderer.invoke('app:openUrl', url),
 })

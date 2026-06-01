@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const zlib = require('zlib')
@@ -42,7 +42,7 @@ const defaultData = {
   },
 }
 
-// ── 生成应用图标（深靛蓝圆形 + 白色 F，托盘和任务栏共用）───────
+// ── 生成应用图标（圆角方块 + 白色勾选）────────────────────────
 function makeAppIcon() {
   const T = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
@@ -62,15 +62,33 @@ function makeAppIcon() {
     return Buffer.concat([lb, tb, data, cb])
   }
 
-  const S  = 32
-  const lx = 8, sw = 4                     // 竖笔左边缘，笔画宽度
-  const rx = 23, ty = 6, by = 26           // 顶横右边缘，上下边界
-  const mby = 14, mbx = 19                 // 中横条起始 y，右边缘 x
+  const S = 32
 
-  function isF(x, y) {
-    if (x >= lx && x < rx  && y >= ty && y < ty + sw) return true  // 顶横
-    if (x >= lx && x < lx + sw && y >= ty && y <= by) return true  // 竖笔
-    if (x >= lx && x < mbx && y >= mby && y < mby + sw) return true // 中横
+  // 圆角方块背景，corner radius = 6
+  function inBg(x, y) {
+    const m = 1, r = 6
+    const x0 = m, y0 = m, x1 = S - 1 - m, y1 = S - 1 - m
+    if (x < x0 || x > x1 || y < y0 || y > y1) return 0
+    const corners = [[x0+r, y0+r], [x1-r, y0+r], [x0+r, y1-r], [x1-r, y1-r]]
+    for (const [cx, cy] of corners) {
+      if (x < cx - r + 0.5 || x > cx + r - 0.5 || y < cy - r + 0.5 || y > cy + r - 0.5) continue
+      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+      if (dist > r + 0.5) return 0
+      if (dist > r - 0.5) return Math.round((r + 0.5 - dist) * 255)
+    }
+    return 255
+  }
+
+  // 白色勾选笔画（两段折线，distance-to-segment 方式）
+  function distSeg(ax, ay, bx, by, px, py) {
+    const dx = bx - ax, dy = by - ay
+    const t  = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy)))
+    return Math.sqrt((px - ax - t*dx) ** 2 + (py - ay - t*dy) ** 2)
+  }
+  function isCheck(x, y) {
+    const sw = 2.3
+    if (distSeg(8,  16, 13, 22, x, y) < sw) return true  // 短臂
+    if (distSeg(13, 22, 24, 11, x, y) < sw) return true  // 长臂
     return false
   }
 
@@ -83,18 +101,12 @@ function makeAppIcon() {
     raw[y * (1 + S*4)] = 0
     for (let x = 0; x < S; x++) {
       const off = y*(1+S*4) + 1 + x*4
-      const dx = x - S/2 + 0.5, dy = y - S/2 + 0.5
-      const r  = Math.sqrt(dx*dx + dy*dy)
-      const R  = S/2 - 0.5
-      if (r > R + 1) {
-        raw[off]=0; raw[off+1]=0; raw[off+2]=0; raw[off+3]=0
+      const a = inBg(x, y)
+      if (!a) { raw[off]=raw[off+1]=raw[off+2]=raw[off+3]=0; continue }
+      if (isCheck(x, y)) {
+        raw[off]=0xff; raw[off+1]=0xff; raw[off+2]=0xff; raw[off+3]=a
       } else {
-        const a = r > R ? Math.round((R+1-r)*255) : 255
-        if (isF(x, y)) {
-          raw[off]=0xff; raw[off+1]=0xff; raw[off+2]=0xff; raw[off+3]=a
-        } else {
-          raw[off]=0x31; raw[off+1]=0x2e; raw[off+2]=0x81; raw[off+3]=a  // #312e81
-        }
+        raw[off]=0x10; raw[off+1]=0xb9; raw[off+2]=0x81; raw[off+3]=a  // #10b981 emerald
       }
     }
   }
@@ -305,7 +317,7 @@ async function createWindow() {
     alwaysOnTop: true,
     resizable: true,
     maximizable: false,
-    skipTaskbar: false,
+    skipTaskbar: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -548,5 +560,22 @@ app.whenReady().then(async () => {
   await createWindow()
   createTray()
 })
+
+ipcMain.handle('app:version', () => app.getVersion())
+
+ipcMain.handle('app:checkUpdate', async () => {
+  try {
+    const res  = await net.fetch('https://api.github.com/repos/LiuZQ802/futurely/releases/latest',
+      { headers: { 'User-Agent': 'Futurely-App' } })
+    const data = await res.json()
+    const latest  = (data.tag_name ?? '').replace(/^v/, '')
+    const current = app.getVersion()
+    return { latest, current, url: data.html_url, hasUpdate: latest !== current }
+  } catch {
+    return { error: true }
+  }
+})
+
+ipcMain.handle('app:openUrl', (_, url) => shell.openExternal(url))
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

@@ -56,7 +56,6 @@ Download the latest `Futurely-Setup-x.x.x.exe` from [Releases](https://github.co
 ![](screenshots/1.png)
 ![](screenshots/2.png)
 ![](screenshots/3.png)
-![](screenshots/4.png)
 
 ---
 
@@ -117,19 +116,6 @@ futurely/
 └── .github/workflows/
     └── release.yml      # Build & publish on git tag push
 ```
-
----
-
-## Releasing
-
-Pushing a version tag triggers GitHub Actions to build the installer and create a draft release:
-
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-Then review and publish the draft on GitHub.
 
 ---
 

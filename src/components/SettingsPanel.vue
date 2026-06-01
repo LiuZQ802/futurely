@@ -81,6 +81,22 @@
           </div>
         </section>
 
+        <!-- 关于 / 检查更新 -->
+        <section>
+          <h4>{{ t('aboutSection') }}</h4>
+          <div class="about-row">
+            <span class="version-text">Futurely {{ version }} </span>
+            <button class="btn-check" :disabled="updateState === 'checking'" @click="checkUpdate">
+              {{ updateLabel }}
+            </button>
+          </div>
+          <div v-if="updateInfo" class="update-info" :class="updateInfo.hasUpdate ? 'has-update' : 'no-update'">
+            <span>{{ updateInfo.hasUpdate ? t('updateAvailable') + ` v${updateInfo.latest}` : t('upToDate') }}</span>
+            <button v-if="updateInfo.hasUpdate" class="btn-dl" @click="openRelease">{{ t('downloadUpdate') }}</button>
+          </div>
+          <div v-if="updateState === 'error'" class="update-info no-update">{{ t('updateError') }}</div>
+        </section>
+
         <!-- 标签管理 -->
         <section>
           <h4>{{ t('tagsSection') }}</h4>
@@ -106,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
 
@@ -114,6 +130,29 @@ defineEmits(['close'])
 
 const store = useTaskStore()
 const { t } = useI18n()
+
+// 关于 / 检查更新
+const version     = ref('')
+const updateState = ref('')   // '' | 'checking' | 'done' | 'error'
+const updateInfo  = ref(null)
+const updateLabel = computed(() => updateState.value === 'checking' ? t('checking') : t('checkUpdate'))
+
+onMounted(async () => {
+  version.value = await window.electronAPI?.getVersion() ?? ''
+})
+
+async function checkUpdate() {
+  updateState.value = 'checking'
+  updateInfo.value  = null
+  const res = await window.electronAPI?.checkUpdate()
+  if (!res || res.error) { updateState.value = 'error'; return }
+  updateState.value = 'done'
+  updateInfo.value  = res
+}
+
+function openRelease() {
+  if (updateInfo.value?.url) window.electronAPI?.openUrl(updateInfo.value.url)
+}
 
 const notifyHours   = ref(store.settings.notifyHoursBefore   ?? 1)
 const notifyMinutes = ref(store.settings.notifyMinutesBefore ?? 0)
@@ -312,4 +351,45 @@ section h4 {
 }
 .btn-add:hover { background: var(--accent-hover); }
 .theme-light .btn-add { color: #062030; }
+
+/* 关于 */
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.version-text { color: var(--t2); font-size: 12px; }
+.btn-check {
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-check:hover:not(:disabled) { color: var(--t1); border-color: var(--accent); }
+.btn-check:disabled { opacity: 0.5; cursor: default; }
+.update-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.has-update { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+.no-update  { background: var(--layer3); color: var(--t3); border: 1px solid var(--layer3-border); }
+.btn-dl {
+  background: #10b981; color: #fff;
+  border: none; border-radius: 6px;
+  font-size: 11px; padding: 3px 10px;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-dl:hover { background: #059669; }
 </style>

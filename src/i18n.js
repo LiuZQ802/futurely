@@ -76,6 +76,14 @@ export const messages = {
     themeDark:              '深色',
     themeLight:             '浅色',
     themeMidnight:          '午夜',
+    aboutSection:           '关于',
+    checkUpdate:            '检查更新',
+    checking:               '检查中...',
+    upToDate:               '已是最新版本',
+    updateAvailable:        '发现新版本',
+    updateError:            '检查失败，请稍后重试',
+    downloadUpdate:         '前往下载',
+    version:                '版本',
   },
 
   en: {
@@ -143,6 +151,14 @@ export const messages = {
     themeDark:              'Dark',
     themeLight:             'Light',
     themeMidnight:          'Midnight',
+    aboutSection:           'About',
+    checkUpdate:            'Check for Updates',
+    checking:               'Checking...',
+    upToDate:               'Already up to date',
+    updateAvailable:        'New version available',
+    updateError:            'Check failed, try again later',
+    downloadUpdate:         'Download',
+    version:                'Version',
   },
 }
 
