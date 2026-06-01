@@ -142,15 +142,15 @@ function remove() {
 }
 
 .form-panel {
-  background: #1e3456;           /* 纯色深蓝，不透明，文字对比清晰 */
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: #162036;
+  border: 1px solid rgba(255,255,255,0.20);
   border-radius: var(--radius);
   width: 90%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.65);
 }
 
 .form-header {
@@ -204,28 +204,32 @@ function remove() {
 }
 
 label {
-  color: #c8d8f0;
+  color: #90afd4;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 input, select, textarea {
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 6px;
-  color: #f0f6ff;
+  color: #eef4ff;
   font-size: 12px;
-  padding: 6px 8px;
+  padding: 7px 9px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
   width: 100%;
 }
+
+input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.3); }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
 }
 
-select option { background: #1e293b; }
+select option { background: #162036; color: #eef4ff; }
 
 textarea { resize: none; }
 

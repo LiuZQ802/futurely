@@ -17,11 +17,12 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks.value.filter((t) => t.status !== 'done')
   )
 
-  const api = window.electronAPI
+  // 每次调用时动态获取，避免初始化时快照为 undefined
+  function api() { return window.electronAPI }
 
   async function load() {
-    if (!api) return
-    const data = await api.loadData()
+    if (!api()) return
+    const data = await api().loadData()
     tasks.value = data.tasks ?? []
     assignees.value = data.assignees ?? ['自己']
     tags.value = data.tags ?? ['工作', '个人']
@@ -29,8 +30,8 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   async function persist() {
-    if (!api) return
-    await api.saveData({
+    if (!api()) return
+    await api().saveData({
       tasks: tasks.value,
       assignees: assignees.value,
       tags: tags.value,
