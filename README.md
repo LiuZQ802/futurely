@@ -4,8 +4,8 @@
 
 **A floating desktop task list for Windows — always on top, out of the way when you don't need it.**
 
-[![Release](https://img.shields.io/github/v/release/YOUR_USERNAME/futurely?style=flat-square&color=818cf8)](https://github.com/YOUR_USERNAME/futurely/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows-blue?style=flat-square)](https://github.com/YOUR_USERNAME/futurely/releases)
+[![Release](https://img.shields.io/github/v/release/LiuZQ802/futurely?style=flat-square&color=818cf8)](https://github.com/LiuZQ802/futurely/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue?style=flat-square)](https://github.com/LiuZQ802/futurely/releases)
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 </div>
@@ -28,7 +28,7 @@
 
 ## Installation
 
-Download the latest `Futurely-Setup-x.x.x.exe` from [Releases](https://github.com/YOUR_USERNAME/futurely/releases) and run it.
+Download the latest `Futurely-Setup-x.x.x.exe` from [Releases](https://github.com/LiuZQ802/futurely/releases) and run it.
 
 > Windows 10 / 11 · No runtime required.
 
