@@ -93,19 +93,20 @@ const filtered = computed(() => {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 12px 7px;
+  gap: 6px;
+  padding: 9px 12px 8px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--layer1-border);
+  background: rgba(48, 57, 68, 0.72);
 }
 
 .filter-btn {
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
   color: var(--t2);
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 12px;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
@@ -117,7 +118,7 @@ const filtered = computed(() => {
 }
 .filter-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: #061513;
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -127,8 +128,8 @@ const filtered = computed(() => {
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
   color: var(--t2);
-  font-size: 11px;
-  padding: 4px 8px;
+  font-size: 12px;
+  padding: 5px 8px;
   border-radius: 8px;
   cursor: pointer;
   outline: none;
@@ -140,10 +141,10 @@ const filtered = computed(() => {
 .list {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 10px 10px;
+  padding: 8px 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .empty {
@@ -151,8 +152,8 @@ const filtered = computed(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: var(--text-muted);
-  font-size: 13px;
+  color: var(--t2);
+  font-size: 14px;
   padding: 40px 0;
 }
 </style>

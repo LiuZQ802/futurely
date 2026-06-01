@@ -111,8 +111,8 @@ async function startResize(dir, e) {
   width: 100%;
   height: 100%;
   background: var(--layer0);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--layer1-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);

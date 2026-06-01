@@ -32,17 +32,21 @@ function onMouseDown(e) {
   width: 100vw;
   height: 100vh;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--layer0);
+  border: 1px solid var(--layer1-border);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
   position: relative;
-  transition: background 0.15s;
+  box-shadow: var(--shadow);
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.mini:hover { background: rgba(25, 38, 65, 0.90); }
+.mini:hover {
+  background: var(--layer1-hover);
+  border-color: #738092;
+}
 .mini:active { cursor: grabbing; }
 
 .icon {
@@ -56,7 +60,7 @@ function onMouseDown(e) {
   top: 6px;
   right: 6px;
   background: #ef4444;
-  color: white;
+  color: #fff;
   font-size: 10px;
   font-weight: 700;
   min-width: 17px;

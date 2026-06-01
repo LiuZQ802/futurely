@@ -15,17 +15,19 @@ let dragTimer = null
 
 // ── 吸附 / 贴边隐藏 ──
 let snapEdge       = null   // 'left'|'right'|'top'|'bottom'|null
+let snapBounds     = null   // 吸附时的可见位置，固定存储避免从隐藏坐标反推
 let autoHide       = false  // 贴边自动隐藏开关
 let slideHidden    = false  // 当前是否已缩到边缘
 let slideAnim      = null   // 滑动动画 timer
+let isOurMove      = false  // animateTo 期间设为 true，区分用户拖拽与我们自己的动画
 let hideDelayTimer = null   // 隐藏延迟 timer
 let edgeMonitor    = null   // 鼠标边缘监测 timer
 const SNAP_DIST    = 30     // 距边缘多少 px 触发吸附
 const SLIVER       = 4      // 隐藏后露出的宽度(px)
-const HIDE_DELAY   = 800    // 离开后多少 ms 开始隐藏
+const HIDE_DELAY   = 600    // 离开后多少 ms 开始隐藏
 
 const MINI_SIZE = 64
-const APP_NAME  = '桌面清单'
+const APP_NAME  = 'Futurely'
 const dataPath  = path.join(app.getPath('userData'), 'tasks.json')
 
 const defaultData = {
@@ -33,15 +35,15 @@ const defaultData = {
   assignees: ['自己'],
   tags: ['工作', '个人'],
   settings: {
-    notifyDaysBefore: 1,
+    notifyHoursBefore:   1,
+    notifyMinutesBefore: 0,
     position: null,
-    windowSize: { width: 400, height: 560 },  // 默认宽度加大
+    windowSize: { width: 400, height: 560 },
   },
 }
 
-// ── 用 Node.js 内置模块生成托盘图标（无外部依赖）──────────────
+// ── 生成托盘图标（深靛蓝圆形 + 白色 F，无外部依赖）────────────
 function makeTrayIcon() {
-  // CRC32
   const T = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
     let c = n
@@ -60,10 +62,21 @@ function makeTrayIcon() {
     return Buffer.concat([lb, tb, data, cb])
   }
 
-  const S = 32
+  const S  = 32
+  const lx = 8, sw = 4                     // 竖笔左边缘，笔画宽度
+  const rx = 23, ty = 6, by = 26           // 顶横右边缘，上下边界
+  const mby = 14, mbx = 19                 // 中横条起始 y，右边缘 x
+
+  function isF(x, y) {
+    if (x >= lx && x < rx  && y >= ty && y < ty + sw) return true  // 顶横
+    if (x >= lx && x < lx + sw && y >= ty && y <= by) return true  // 竖笔
+    if (x >= lx && x < mbx && y >= mby && y < mby + sw) return true // 中横
+    return false
+  }
+
   const ihdr = Buffer.allocUnsafe(13)
   ihdr.writeUInt32BE(S, 0); ihdr.writeUInt32BE(S, 4)
-  ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0  // RGBA
+  ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0
 
   const raw = Buffer.allocUnsafe(S * (1 + S * 4))
   for (let y = 0; y < S; y++) {
@@ -72,22 +85,16 @@ function makeTrayIcon() {
       const off = y*(1+S*4) + 1 + x*4
       const dx = x - S/2 + 0.5, dy = y - S/2 + 0.5
       const r  = Math.sqrt(dx*dx + dy*dy)
-      if (r < S/2 - 1) {
-        // 圆形背景：青色 #20b8a6
-        raw[off]=0x20; raw[off+1]=0xb8; raw[off+2]=0xa6; raw[off+3]=255
-        // 中间画简单勾形（✓）
-        const cx=x-S/2+0.5, cy=y-S/2+0.5
-        const inCheck = (
-          (cx>-9 && cx<-2 && cy>(cx+9)*0.7-2 && cy<(cx+9)*0.7+2) ||
-          (cx>-2 && cx<8  && cy>-(cx-8)*1.1-2 && cy<-(cx-8)*1.1+2)
-        )
-        if (inCheck) { raw[off]=255; raw[off+1]=255; raw[off+2]=255; raw[off+3]=255 }
-      } else if (r < S/2) {
-        // 边缘抗锯齿
-        const a = Math.round((S/2 - r) * 255)
-        raw[off]=0x20; raw[off+1]=0xb8; raw[off+2]=0xa6; raw[off+3]=a
-      } else {
+      const R  = S/2 - 0.5
+      if (r > R + 1) {
         raw[off]=0; raw[off+1]=0; raw[off+2]=0; raw[off+3]=0
+      } else {
+        const a = r > R ? Math.round((R+1-r)*255) : 255
+        if (isF(x, y)) {
+          raw[off]=0xff; raw[off+1]=0xff; raw[off+2]=0xff; raw[off+3]=a
+        } else {
+          raw[off]=0x31; raw[off+1]=0x2e; raw[off+2]=0x81; raw[off+3]=a  // #312e81
+        }
       }
     }
   }
@@ -132,6 +139,7 @@ function hiddenBounds(edge, sb) {
 /** 平滑滑动到目标位置（ease-out cubic，约 180ms）*/
 function animateTo(target, onDone) {
   if (slideAnim) { clearInterval(slideAnim); slideAnim = null }
+  isOurMove = true
   const start = mainWindow.getBounds()
   const STEPS = 11
   let s = 0
@@ -146,14 +154,14 @@ function animateTo(target, onDone) {
     })
     if (s >= STEPS) {
       clearInterval(slideAnim); slideAnim = null
+      isOurMove = false
       onDone?.()
     }
   }, 16)
 }
 
-/** 检查拖拽结束后是否贴近边缘，是则吸附并自动滑入 */
+/** 检查拖拽结束后是否贴近边缘，是则直接缩入（折叠态和展开态都支持） */
 function checkSnap() {
-  if (isCollapsed) return
   const wa = workArea()
   const b  = mainWindow.getBounds()
   const gaps = {
@@ -164,16 +172,16 @@ function checkSnap() {
   }
   let nearest = null, minD = SNAP_DIST
   for (const [edge, d] of Object.entries(gaps)) {
-    if (Math.abs(d) < minD) { minD = Math.abs(d); nearest = edge }
+    if (d < minD) { minD = d; nearest = edge }
   }
   if (nearest) {
     snapEdge = nearest
     autoHide = true
-    // 先滑到贴边位置，300ms 后自动缩入
-    animateTo(snappedBounds(nearest, b), () => {
-      startEdgeMonitor()
-      setTimeout(() => slideOut(), 300)
-    })
+    snapBounds = snappedBounds(nearest, b)          // 固定保存可见位置
+    const hb = hiddenBounds(nearest, snapBounds)
+    slideHidden = true
+    // 400ms 延迟再启动监测，让 drag 结束后 cursor 有时间离开边缘
+    animateTo(hb, () => setTimeout(() => startEdgeMonitor(), 400))
     notifySnapChange()
   }
 }
@@ -185,19 +193,16 @@ function notifySnapChange() {
 
 /** 滑入（从隐藏态恢复到贴边可见） */
 function slideIn() {
-  if (!snapEdge || !slideHidden) return
+  if (!snapEdge || !slideHidden || !snapBounds) return
   if (hideDelayTimer) { clearTimeout(hideDelayTimer); hideDelayTimer = null }
-  const sb = snappedBounds(snapEdge, mainWindow.getBounds())
   slideHidden = false
-  animateTo(sb)
+  animateTo(snapBounds)
 }
 
 /** 滑出（缩到边缘外只露 SLIVER px） */
 function slideOut() {
-  if (!snapEdge || slideHidden) return
-  const b  = mainWindow.getBounds()
-  const sb = snappedBounds(snapEdge, b)
-  const hb = hiddenBounds(snapEdge, sb)
+  if (!snapEdge || slideHidden || !snapBounds) return
+  const hb = hiddenBounds(snapEdge, snapBounds)
   slideHidden = true
   animateTo(hb)
 }
@@ -206,11 +211,10 @@ function slideOut() {
 function startEdgeMonitor() {
   stopEdgeMonitor()
   edgeMonitor = setInterval(() => {
-    if (!autoHide || !snapEdge || isCollapsed) return
+    if (!autoHide || !snapEdge || !snapBounds) return
     const cursor = screen.getCursorScreenPoint()
-    const b  = mainWindow.getBounds()
-    const sb = snappedBounds(snapEdge, b)
-    const M  = 12  // 触发区域边距
+    const sb = snapBounds   // 始终用固定的可见位置判断区域
+    const M  = 16
 
     const inZone = cursor.x >= sb.x - M && cursor.x <= sb.x + sb.width  + M
                 && cursor.y >= sb.y - M && cursor.y <= sb.y + sb.height + M
@@ -247,28 +251,31 @@ function saveData(data) {
 }
 
 function checkDeadlines(data) {
-  const now   = new Date()
-  const today = new Date(); today.setHours(0,0,0,0)
-  const n = data.settings.notifyDaysBefore ?? 1
+  const now = new Date()
+  const h   = data.settings.notifyHoursBefore   ?? 1
+  const m   = data.settings.notifyMinutesBefore ?? 0
+  const notifyMs = (h * 60 + m) * 60000
 
   data.tasks.forEach((task) => {
     if (task.status === 'done' || !task.deadline) return
     const deadline = new Date(task.deadline)
-    const dayD = new Date(task.deadline); dayD.setHours(0,0,0,0)
-    const diff = Math.round((dayD - today) / 86400000)
+    const diffMs   = deadline - now
+    if (diffMs < 0 || diffMs > notifyMs) return
 
-    if (diff >= 0 && diff <= n) {
-      const hasTime = task.deadline.includes('T')
-      const timePart = hasTime
-        ? ` ${String(deadline.getHours()).padStart(2,'0')}:${String(deadline.getMinutes()).padStart(2,'0')}`
-        : ''
-      const label = diff === 0 ? `今天${timePart}截止` : `还有 ${diff} 天${timePart}截止`
-      new Notification({
-        title: `${APP_NAME} · 任务提醒`,
-        body: `「${task.title}」${label}`,
-        silent: false,
-      }).show()
-    }
+    const diffMin = Math.round(diffMs / 60000)
+    const dh = Math.floor(diffMin / 60)
+    const dm = diffMin % 60
+    let label
+    if (dh > 0 && dm > 0)      label = `还有 ${dh} 小时 ${dm} 分钟截止`
+    else if (dh > 0)           label = `还有 ${dh} 小时截止`
+    else if (dm > 0)           label = `还有 ${dm} 分钟截止`
+    else                       label = `即将截止`
+
+    new Notification({
+      title: `${APP_NAME} · 任务提醒`,
+      body:  `「${task.title}」${label}`,
+      silent: false,
+    }).show()
   })
 }
 
@@ -308,13 +315,37 @@ async function createWindow() {
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
   })
 
+  let snapDebounce = null
   mainWindow.on('moved', () => {
+    // animateTo 期间我们自己在动，忽略
+    if (isOurMove) return
+
     const [wx, wy] = mainWindow.getPosition()
     const d = loadData(); d.settings.position = { x: wx, y: wy }; saveData(d)
+
+    // 贴边状态中：检测用户是否把窗口拖离了贴边位置
+    if (snapEdge && snapBounds) {
+      const b = mainWindow.getBounds()
+      const drifted = Math.abs(b.x - snapBounds.x) > 15 || Math.abs(b.y - snapBounds.y) > 15
+      if (!drifted) return  // 还在贴边位置附近（如 slideIn 后的微小事件），忽略
+      // 用户把窗口拖走了，清除贴边状态
+      stopEdgeMonitor()
+      snapEdge = null; snapBounds = null; autoHide = false; slideHidden = false
+      notifySnapChange()
+      // 继续往下，拖到新位置后重新检测是否贴边
+    }
+
+    // 防抖：停止移动 200ms 后检测是否贴边
+    if (snapDebounce) clearTimeout(snapDebounce)
+    snapDebounce = setTimeout(() => {
+      snapDebounce = null
+      checkSnap()
+    }, 200)
   })
 
   mainWindow.on('blur', () => {
     if (!mainWindow || mainWindow.isDestroyed() || resizeState || dragTimer) return
+    if (snapEdge) return  // 贴边状态下不自动折叠
     mainWindow.webContents.send('window-blur')
   })
 
@@ -357,6 +388,13 @@ ipcMain.handle('tasks:load', () => loadData())
 ipcMain.handle('tasks:save', (_, data) => { saveData(data); return true })
 
 ipcMain.handle('window:collapse', () => {
+  // 贴边缩入时先把窗口拉回可见位置，再折叠
+  if (snapEdge) {
+    stopEdgeMonitor()
+    if (slideHidden && snapBounds) mainWindow.setPosition(snapBounds.x, snapBounds.y)
+    snapEdge = null; snapBounds = null; autoHide = false; slideHidden = false
+    notifySnapChange()
+  }
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null; isCollapsed = true
   collapsedPos = mainWindow.getPosition()
@@ -367,6 +405,12 @@ ipcMain.handle('window:collapse', () => {
 
 ipcMain.handle('window:expand', () => {
   isCollapsed = false
+  // 展开时清除贴边状态（mini 模式贴边的 snapBounds 是 64×64，展开后尺寸变了需要重新贴）
+  if (snapEdge) {
+    stopEdgeMonitor()
+    snapEdge = null; snapBounds = null; autoHide = false; slideHidden = false
+    notifySnapChange()
+  }
   const { width, height } = loadData().settings.windowSize
   mainWindow.setMaximumSize(0, 0)
   mainWindow.setMinimumSize(1, 1)
@@ -377,13 +421,11 @@ ipcMain.handle('window:startDrag', () => {
   // 如果当前贴边缩入，先取消吸附让窗口完全可见
   if (snapEdge) {
     stopEdgeMonitor()
-    if (slideHidden) {
-      const sb = snappedBounds(snapEdge, mainWindow.getBounds())
-      mainWindow.setBounds(sb)
+    if (slideHidden && snapBounds) {
+      mainWindow.setBounds(snapBounds)
       slideHidden = false
     }
-    snapEdge = null
-    autoHide = false
+    snapEdge = null; snapBounds = null; autoHide = false
     notifySnapChange()
   }
 
@@ -409,9 +451,8 @@ ipcMain.handle('window:stopDrag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
   const moved = mainWindow._drag?.moved ?? false
   mainWindow._drag = null
-  // 拖拽结束后检测吸附
-  if (moved && !isCollapsed) {
-    // 先清除旧吸附状态
+  // 拖拽结束后检测吸附（折叠态和展开态都支持）
+  if (moved) {
     snapEdge = null
     checkSnap()
   }
@@ -436,6 +477,7 @@ ipcMain.handle('window:unsnap', () => {
   if (slideHidden) slideIn()
   setTimeout(() => {
     snapEdge = null
+    snapBounds = null
     autoHide = false
     slideHidden = false
     notifySnapChange()

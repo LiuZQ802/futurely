@@ -1,7 +1,7 @@
 <template>
   <div class="header">
     <div class="left">
-      <span class="title">📋 桌面清单</span>
+      <span class="title">Futurely</span>
       <span v-if="activeCount > 0" class="count">{{ activeCount }}</span>
       <!-- 贴边状态指示（拖离可取消） -->
       <span

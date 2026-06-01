@@ -7,7 +7,8 @@ export const useTaskStore = defineStore('tasks', () => {
   const assignees = ref(['自己'])
   const tags = ref(['工作', '个人'])
   const settings = ref({
-    notifyDaysBefore: 1,
+    notifyHoursBefore:   1,
+    notifyMinutesBefore: 0,
     position: null,
     collapsed: false,
     windowSize: { width: 340, height: 520 },

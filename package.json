@@ -1,13 +1,14 @@
 {
-  "name": "desktop-list",
-  "version": "1.0.0",
-  "description": "桌面任务清单",
+  "name": "futurely",
+  "version": "0.1.0",
+  "description": "A floating desktop task list with edge-snap",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"node scripts/dev.js\"",
     "build": "vite build",
     "electron": "electron .",
-    "pack": "vite build && electron-builder"
+    "gen-icon": "node scripts/gen-icon.js",
+    "pack": "node scripts/gen-icon.js && vite build && electron-builder"
   },
   "dependencies": {
     "pinia": "^2.1.7",
@@ -24,14 +25,15 @@
     "vite-plugin-electron": "^0.28.0"
   },
   "build": {
-    "appId": "com.desktoplist.app",
-    "productName": "桌面清单",
+    "appId": "com.futurely.app",
+    "productName": "Futurely",
     "directories": {
       "output": "release"
     },
     "win": {
       "target": "nsis",
-      "icon": "public/icon.ico"
+      "icon": "public/icon.ico",
+      "artifactName": "Futurely-Setup-${version}.exe"
     },
     "nsis": {
       "oneClick": false,

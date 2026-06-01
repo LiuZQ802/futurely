@@ -11,16 +11,25 @@
         <section>
           <h4>截止日期提醒</h4>
           <div class="field row-inline">
-            <label>提前提醒天数</label>
+            <label>提前提醒</label>
             <input
               type="number"
-              v-model.number="notifyDays"
+              v-model.number="notifyHours"
               min="0"
-              max="30"
-              style="width: 60px"
-              @change="store.updateSettings({ notifyDaysBefore: notifyDays })"
+              max="999"
+              style="width: 58px"
+              @change="saveNotify"
             />
-            <span class="unit">天</span>
+            <span class="unit">小时</span>
+            <input
+              type="number"
+              v-model.number="notifyMinutes"
+              min="0"
+              max="59"
+              style="width: 58px"
+              @change="saveNotify"
+            />
+            <span class="unit">分钟</span>
           </div>
         </section>
 
@@ -83,9 +92,17 @@ import { useTaskStore } from '../store/tasks.js'
 defineEmits(['close'])
 
 const store = useTaskStore()
-const notifyDays = ref(store.settings.notifyDaysBefore)
+const notifyHours   = ref(store.settings.notifyHoursBefore   ?? 1)
+const notifyMinutes = ref(store.settings.notifyMinutesBefore ?? 0)
 const newAssignee = ref('')
 const newTag = ref('')
+
+function saveNotify() {
+  store.updateSettings({
+    notifyHoursBefore:   notifyHours.value,
+    notifyMinutesBefore: notifyMinutes.value,
+  })
+}
 
 function addAssignee() {
   store.addAssignee(newAssignee.value.trim())
@@ -102,7 +119,7 @@ function addTag() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.34);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,7 +135,7 @@ function addTag() {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.32);
 }
 
 .panel-header {
@@ -129,7 +146,7 @@ function addTag() {
   border-bottom: 1px solid var(--layer2-border);
   background: var(--layer2-header);
   color: var(--t1);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -137,7 +154,7 @@ function addTag() {
 .close-btn {
   background: transparent;
   border: none;
-  color: #7a9ab8;
+  color: var(--t2);
   cursor: pointer;
   font-size: 15px;
   width: 24px; height: 24px;
@@ -145,7 +162,7 @@ function addTag() {
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
-.close-btn:hover { background: rgba(255,255,255,0.1); color: #e2eaf6; }
+.close-btn:hover { background: rgba(255,255,255,0.08); color: var(--t1); }
 
 .panel-body {
   padding: 14px;
@@ -157,13 +174,13 @@ function addTag() {
 
 section h4 {
   color: var(--t2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  text-transform: none;
+  letter-spacing: 0;
   margin-bottom: 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #3a5070;
+  border-bottom: 1px solid var(--layer2-border);
 }
 
 .field.row-inline {
@@ -173,11 +190,27 @@ section h4 {
 }
 
 .field.row-inline label {
-  color: #a8c4e0;
-  font-size: 12px;
+  color: var(--t2);
+  font-size: 13px;
 }
 
-.unit { color: #7a9ab8; font-size: 12px; }
+.field.row-inline input {
+  background: #eef2f7;
+  border: 1px solid #aeb8c6;
+  border-radius: 7px;
+  color: #111827;
+  font-size: 13px;
+  padding: 6px 8px;
+  outline: none;
+  font-family: inherit;
+}
+
+.field.row-inline input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(32,184,166,0.18);
+}
+
+.unit { color: var(--t2); font-size: 13px; }
 
 .chips-wrap {
   display: flex;
@@ -193,15 +226,15 @@ section h4 {
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
   color: var(--t1);
-  font-size: 11px;
+  font-size: 12px;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .remove {
   background: transparent;
   border: none;
-  color: #5a7a98;
+  color: var(--t3);
   cursor: pointer;
   font-size: 13px;
   padding: 0;
@@ -215,10 +248,10 @@ section h4 {
   flex: 1;
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--t1);
-  font-size: 12px;
-  padding: 6px 9px;
+  font-size: 13px;
+  padding: 7px 9px;
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s;
@@ -228,11 +261,12 @@ section h4 {
 
 .btn-add {
   background: var(--accent);
-  color: white;
+  color: #061513;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 6px 12px;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;

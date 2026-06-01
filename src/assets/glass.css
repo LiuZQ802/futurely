@@ -4,52 +4,52 @@
    ═══════════════════════════════════════════════ */
 :root {
   /* Layer 0 — 主窗口背景 */
-  --layer0:        rgba(8, 12, 24, 0.90);
+  --layer0:        rgba(36, 42, 50, 0.94);
 
   /* Layer 1 — 卡片 / 列表项 */
-  --layer1:        #14213d;
-  --layer1-hover:  #1a2a4e;
-  --layer1-border: #2a3f60;
+  --layer1:        #303843;
+  --layer1-hover:  #394350;
+  --layer1-border: #586474;
 
   /* Layer 2 — 弹窗面板 */
-  --layer2:        #1c2f4a;
-  --layer2-header: #152338;
-  --layer2-border: #3a5472;
+  --layer2:        #38424f;
+  --layer2-header: #303946;
+  --layer2-border: #647182;
 
   /* Layer 3 — 输入框（最深，在 Layer2 内） */
-  --layer3:        #0d1928;
-  --layer3-border: #2e4560;
+  --layer3:        #27303a;
+  --layer3-border: #657283;
 
   /* ── 文字 ── */
-  --t1: #eef3ff;   /* 主文字：亮蓝白 */
-  --t2: #90aac8;   /* 次要文字 */
-  --t3: #4a6480;   /* 提示/禁用 */
+  --t1: #fbfcfe;   /* 主文字 */
+  --t2: #d0d7e2;   /* 次要文字 */
+  --t3: #9aa7b6;   /* 提示/禁用 */
 
   /* ── 强调色 ── */
-  --accent:       #7c8ffa;
-  --accent-hover: #a5b4fc;
-  --accent-dim:   rgba(124,143,250,0.2);
+  --accent:       #20b8a6;
+  --accent-hover: #48d1c0;
+  --accent-dim:   rgba(32,184,166,0.18);
 
   /* ── 优先级（高饱和，深背景上清晰可见）── */
-  --p-urgent:     #ff7070;
-  --p-high:       #ffc94d;
-  --p-medium:     #5fb8ff;
-  --p-low:        #7a95b0;
+  --p-urgent:     #ef4444;
+  --p-high:       #f59e0b;
+  --p-medium:     #3b82f6;
+  --p-low:        #94a3b8;
 
-  --p-urgent-bg:  rgba(255,112,112,0.15);
-  --p-high-bg:    rgba(255,201, 77,0.12);
-  --p-medium-bg:  rgba( 95,184,255,0.12);
-  --p-low-bg:     rgba(122,149,176,0.10);
+  --p-urgent-bg:  rgba(239, 68, 68,0.14);
+  --p-high-bg:    rgba(245,158, 11,0.13);
+  --p-medium-bg:  rgba( 59,130,246,0.13);
+  --p-low-bg:     rgba(148,163,184,0.12);
 
   /* ── 状态色 ── */
-  --s-todo:       #5a7a98;
-  --s-doing:      #5fb8ff;
-  --s-done:       #50d890;
+  --s-todo:       #8b98a8;
+  --s-doing:      #38bdf8;
+  --s-done:       #34d399;
 
   /* ── 通用 ── */
   --radius:    12px;
   --radius-sm: 7px;
-  --shadow:    0 6px 32px rgba(0,0,0,0.55);
+  --shadow:    0 12px 34px rgba(0,0,0,0.30);
   --border:    var(--layer1-border);
 }
 
@@ -62,7 +62,7 @@ html, body {
   user-select: none;
   overflow: hidden;
   color: var(--t1);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 input, textarea, select {
@@ -73,5 +73,5 @@ input, textarea, select {
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--layer1-border); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #3a5a7a; }
+::-webkit-scrollbar-thumb { background: #6b7787; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #7b8796; }
