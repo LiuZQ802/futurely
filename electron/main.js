@@ -19,6 +19,9 @@ let collapsedPos = null
 let resizeTimer = null
 let resizeState = null
 let isCollapsed = false
+let dragTimer = null
+let dragInitBounds = null
+let dragInitMouse = null
 
 const MINI_SIZE = 64
 const dataPath = path.join(app.getPath('userData'), 'tasks.json')
@@ -217,13 +220,32 @@ ipcMain.handle('window:expand', () => {
   flog(`expand: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
-// 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
-ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
-  const b = mainWindow.getBounds()
-  // 折叠状态下强制保持 MINI_SIZE，防止 Snap 偷偷改了尺寸
-  const w = isCollapsed ? MINI_SIZE : b.width
-  const h = isCollapsed ? MINI_SIZE : b.height
-  mainWindow.setBounds({ x: b.x + mouseX, y: b.y + mouseY, width: w, height: h })
+// 拖拽：主进程轮询 getCursorScreenPoint()，scaleFactor 正确转换物理→逻辑像素
+ipcMain.handle('window:startDrag', () => {
+  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
+  dragInitBounds = mainWindow.getBounds()
+  dragInitMouse = screen.getCursorScreenPoint()
+  const scale = screen.getPrimaryDisplay().scaleFactor
+
+  dragTimer = setInterval(() => {
+    const mouse = screen.getCursorScreenPoint()
+    const dx = (mouse.x - dragInitMouse.x) / scale
+    const dy = (mouse.y - dragInitMouse.y) / scale
+    const w = isCollapsed ? MINI_SIZE : dragInitBounds.width
+    const h = isCollapsed ? MINI_SIZE : dragInitBounds.height
+    mainWindow.setBounds({
+      x: Math.round(dragInitBounds.x + dx),
+      y: Math.round(dragInitBounds.y + dy),
+      width: w,
+      height: h,
+    })
+  }, 16)
+})
+
+ipcMain.handle('window:stopDrag', () => {
+  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
+  dragInitBounds = null
+  dragInitMouse = null
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {

@@ -17,21 +17,22 @@ function onMouseDown(e) {
   if (e.button !== 0) return
   let totalMoved = 0
   let hasMoved = false
+  let dragStarted = false
 
   const onMove = async (ev) => {
     totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
-    if (!hasMoved && totalMoved > 6) hasMoved = true
-    if (hasMoved) {
-      await window.electronAPI?.dragWindow({
-        mouseX: Math.round(ev.movementX),
-        mouseY: Math.round(ev.movementY),
-      })
+    if (!hasMoved && totalMoved > 6) {
+      hasMoved = true
+      // 主进程开始轮询光标位置做拖拽
+      await window.electronAPI?.startDrag()
+      dragStarted = true
     }
   }
 
-  const onUp = () => {
+  const onUp = async () => {
     window.removeEventListener('mousemove', onMove)
     window.removeEventListener('mouseup', onUp)
+    if (dragStarted) await window.electronAPI?.stopDrag()
     if (!hasMoved) emit('expand')
   }
 
