@@ -15,34 +15,20 @@ const count = computed(() => store.activeTasks.length)
 
 function onMouseDown(e) {
   if (e.button !== 0) return
-  let totalMoved = 0
-  let hasMoved = false
-  let dragStarted = false
-
-  const onMove = async (ev) => {
-    totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
-    if (!hasMoved && totalMoved > 6) {
-      hasMoved = true
-      // 主进程开始轮询光标位置做拖拽
-      await window.electronAPI?.startDrag()
-      dragStarted = true
-    }
-  }
+  // 记录 mousedown 时的窗口位置
+  window.electronAPI?.recordPos()
 
   const onUp = async () => {
-    window.removeEventListener('mousemove', onMove)
     window.removeEventListener('mouseup', onUp)
-    if (dragStarted) await window.electronAPI?.stopDrag()
-    if (!hasMoved) emit('expand')
+    // 如果窗口没移动 → 是点击 → 展开
+    const moved = await window.electronAPI?.didMove()
+    if (!moved) emit('expand')
   }
-
-  window.addEventListener('mousemove', onMove)
   window.addEventListener('mouseup', onUp)
 }
 </script>
 
 <style scoped>
-/* 填满整个折叠窗口区域，消除透明间隙 */
 .mini {
   width: 100vw;
   height: 100vh;
@@ -55,6 +41,7 @@ function onMouseDown(e) {
   cursor: grab;
   position: relative;
   transition: background 0.15s;
+  -webkit-app-region: drag;  /* OS 原生拖拽，零延迟零漂移 */
 }
 
 .mini:hover {
@@ -69,6 +56,7 @@ function onMouseDown(e) {
   font-size: 24px;
   line-height: 1;
   pointer-events: none;
+  -webkit-app-region: no-drag;
 }
 
 .badge {
@@ -87,5 +75,6 @@ function onMouseDown(e) {
   justify-content: center;
   padding: 0 3px;
   pointer-events: none;
+  -webkit-app-region: no-drag;
 }
 </style>

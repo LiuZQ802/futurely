@@ -19,9 +19,7 @@ let collapsedPos = null
 let resizeTimer = null
 let resizeState = null
 let isCollapsed = false
-let dragTimer = null
-let dragInitBounds = null
-let dragInitMouse = null
+let recordedPos = null
 
 const MINI_SIZE = 64
 const dataPath = path.join(app.getPath('userData'), 'tasks.json')
@@ -220,32 +218,14 @@ ipcMain.handle('window:expand', () => {
   flog(`expand: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
-// 拖拽：主进程轮询 getCursorScreenPoint()，scaleFactor 正确转换物理→逻辑像素
-ipcMain.handle('window:startDrag', () => {
-  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
-  dragInitBounds = mainWindow.getBounds()
-  dragInitMouse = screen.getCursorScreenPoint()
-  const scale = screen.getPrimaryDisplay().scaleFactor
-
-  dragTimer = setInterval(() => {
-    const mouse = screen.getCursorScreenPoint()
-    const dx = (mouse.x - dragInitMouse.x) / scale
-    const dy = (mouse.y - dragInitMouse.y) / scale
-    const w = isCollapsed ? MINI_SIZE : dragInitBounds.width
-    const h = isCollapsed ? MINI_SIZE : dragInitBounds.height
-    mainWindow.setBounds({
-      x: Math.round(dragInitBounds.x + dx),
-      y: Math.round(dragInitBounds.y + dy),
-      width: w,
-      height: h,
-    })
-  }, 16)
+// 点击检测：mousedown 时记位置，mouseup 时比较是否移动
+ipcMain.handle('window:recordPos', () => {
+  recordedPos = mainWindow.getPosition()
 })
-
-ipcMain.handle('window:stopDrag', () => {
-  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
-  dragInitBounds = null
-  dragInitMouse = null
+ipcMain.handle('window:didMove', () => {
+  if (!recordedPos) return true
+  const [cx, cy] = mainWindow.getPosition()
+  return Math.abs(cx - recordedPos[0]) > 4 || Math.abs(cy - recordedPos[1]) > 4
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {
