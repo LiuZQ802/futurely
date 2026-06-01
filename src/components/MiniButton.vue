@@ -18,7 +18,7 @@ function onMouseDown(e) {
   let totalMoved = 0
   let hasMoved = false
 
-  const scale = window.screenScale || 1
+  const scale = window.devicePixelRatio || 1
   const onMove = async (ev) => {
     totalMoved += Math.abs(ev.movementX) + Math.abs(ev.movementY)
     if (!hasMoved && totalMoved > 6) hasMoved = true
