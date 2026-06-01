@@ -3,42 +3,38 @@
     <div class="left">
       <span class="title">Futurely</span>
       <span v-if="activeCount > 0" class="count">{{ activeCount }}</span>
-      <!-- 贴边状态指示（拖离可取消） -->
       <span
         v-if="snapEdge"
         class="snap-badge"
-        :title="`已贴${EDGE_NAMES[snapEdge]}边缩入 · 拖动可取消`"
-      >{{ EDGE_ICONS[snapEdge] }} 贴边</span>
+        :title="locale.snapTooltip(locale.edgeName[snapEdge])"
+      >{{ EDGE_ICONS[snapEdge] }} {{ t('snapBadge') }}</span>
     </div>
     <div class="actions">
-      <button class="btn" title="新建任务" @click="$emit('add-task')">＋</button>
-      <button class="btn" title="设置" @click="$emit('open-settings')">⚙</button>
-      <button class="btn" title="折叠" @click="$emit('collapse')">—</button>
+      <button class="btn" :title="t('btnNewTask')"   @click="$emit('add-task')">＋</button>
+      <button class="btn" :title="t('btnSettings')"  @click="$emit('open-settings')">⚙</button>
+      <button class="btn" :title="t('btnCollapse')"  @click="$emit('collapse')">—</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '../store/tasks.js'
-import { computed } from 'vue'
+import { useI18n } from '../i18n.js'
 
 defineEmits(['collapse', 'open-settings', 'add-task'])
 
 const store = useTaskStore()
+const { t, locale } = useI18n()
 const activeCount = computed(() => store.activeTasks.length)
 const snapEdge = ref(null)
 
 const EDGE_ICONS = { left: '◁', right: '▷', top: '△', bottom: '▽' }
-const EDGE_NAMES = { left: '左', right: '右', top: '顶', bottom: '底' }
 
 onMounted(async () => {
   const state = await window.electronAPI?.getSnapState()
   if (state) snapEdge.value = state.edge
-
-  window.electronAPI?.onSnapChanged(({ edge }) => {
-    snapEdge.value = edge
-  })
+  window.electronAPI?.onSnapChanged(({ edge }) => { snapEdge.value = edge })
 })
 </script>
 

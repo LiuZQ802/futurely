@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watchEffect } from 'vue'
 import FloatingWidget from './components/FloatingWidget.vue'
 import { useTaskStore } from './store/tasks.js'
 import './assets/glass.css'
@@ -11,8 +11,13 @@ import './assets/glass.css'
 const store = useTaskStore()
 const loaded = ref(false)
 
+// 主题类挂到 <html>，在 store 加载前先用 dark
+watchEffect(() => {
+  const theme = store.settings.theme ?? 'dark'
+  document.documentElement.className = theme === 'dark' ? '' : `theme-${theme}`
+})
+
 onMounted(async () => {
-  // 禁止 Ctrl+滚轮 / 触控板捏合缩放
   document.addEventListener('wheel', (e) => {
     if (e.ctrlKey) e.preventDefault()
   }, { passive: false })

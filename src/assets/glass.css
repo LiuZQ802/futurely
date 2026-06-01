@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
-   DesktopList 统一设计变量
-   三层深度：Layer0（最深）→ Layer1（卡片）→ Layer2（弹窗）
+   Futurely 设计变量  ·  三层深度色彩体系
+   默认：深色  |  .theme-light：浅色  |  .theme-midnight：午夜
    ═══════════════════════════════════════════════ */
 :root {
   /* Layer 0 — 主窗口背景 */
@@ -46,11 +46,88 @@
   --s-doing:      #38bdf8;
   --s-done:       #34d399;
 
+  /* ── 已完成任务卡片 ── */
+  --card-done-bg:     #2a323c;
+  --card-done-border: #505c6b;
+
+  /* ── 筛选栏背景 ── */
+  --filter-bar-bg: rgba(48, 57, 68, 0.72);
+
+  /* ── 日期选择器图标滤镜 ── */
+  --dt-icon-filter:       brightness(0) invert(0.75);
+  --dt-icon-filter-hover: brightness(0) invert(1);
+
   /* ── 通用 ── */
   --radius:    12px;
   --radius-sm: 7px;
   --shadow:    0 12px 34px rgba(0,0,0,0.30);
   --border:    var(--layer1-border);
+}
+
+/* ── 浅色主题 ─────────────────────────────────── */
+.theme-light {
+  --layer0:        rgba(242, 245, 250, 0.97);
+  --layer1:        #ffffff;
+  --layer1-hover:  #f0f4f9;
+  --layer1-border: #d0d8e4;
+  --layer2:        #f7f9fc;
+  --layer2-header: #edf1f7;
+  --layer2-border: #c4cdd8;
+  --layer3:        #edf1f7;
+  --layer3-border: #b8c3d0;
+  --t1:            #111827;
+  --t2:            #374151;
+  --t3:            #9ca3af;
+  --accent:        #0ea5e9;
+  --accent-hover:  #38bdf8;
+  --accent-dim:    rgba(14,165,233,0.12);
+  --p-urgent:      #dc2626;
+  --p-high:        #d97706;
+  --p-medium:      #2563eb;
+  --p-low:         #64748b;
+  --p-urgent-bg:   rgba(220,38,38,0.10);
+  --p-high-bg:     rgba(217,119,6,0.10);
+  --p-medium-bg:   rgba(37,99,235,0.10);
+  --p-low-bg:      rgba(100,116,139,0.10);
+  --s-todo:        #94a3b8;
+  --s-doing:       #0ea5e9;
+  --s-done:        #10b981;
+  --card-done-bg:     #f1f5f9;
+  --card-done-border: #c4cdd8;
+  --filter-bar-bg: rgba(237, 241, 247, 0.88);
+  --dt-icon-filter:       brightness(0.45);
+  --dt-icon-filter-hover: brightness(0.2);
+  --shadow: 0 8px 24px rgba(0,0,0,0.09);
+}
+
+/* ── 午夜主题 ─────────────────────────────────── */
+.theme-midnight {
+  --layer0:        rgba(10, 12, 18, 0.97);
+  --layer1:        #13161f;
+  --layer1-hover:  #1a1e2c;
+  --layer1-border: #252c3e;
+  --layer2:        #181c28;
+  --layer2-header: #13161f;
+  --layer2-border: #252c3e;
+  --layer3:        #0e1018;
+  --layer3-border: #252c3e;
+  --t1:            #e8ecf4;
+  --t2:            #8a96b0;
+  --t3:            #4f5a74;
+  --accent:        #818cf8;
+  --accent-hover:  #a5b0ff;
+  --accent-dim:    rgba(129,140,248,0.15);
+  --p-urgent:      #f87171;
+  --p-high:        #fbbf24;
+  --p-medium:      #60a5fa;
+  --p-low:         #94a3b8;
+  --s-todo:        #4f5a74;
+  --s-doing:       #60a5fa;
+  --s-done:        #34d399;
+  --card-done-bg:     #0e1018;
+  --card-done-border: #252c3e;
+  --filter-bar-bg: rgba(19, 22, 31, 0.80);
+  --shadow: 0 12px 40px rgba(0,0,0,0.55);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

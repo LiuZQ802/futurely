@@ -12,7 +12,7 @@
         {{ s.label }}
       </button>
       <select v-model="tagFilter" class="tag-select">
-        <option value="">所有标签</option>
+        <option value="">{{ t('allTags') }}</option>
         <option v-for="t in store.tags" :key="t" :value="t">{{ t }}</option>
       </select>
     </div>
@@ -28,7 +28,7 @@
         />
       </template>
       <div v-else class="empty">
-        <span>暂无任务 ✨</span>
+        <span>{{ t('noTasks') }}</span>
       </div>
     </div>
   </div>
@@ -38,17 +38,19 @@
 import { ref, computed } from 'vue'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore } from '../store/tasks.js'
+import { useI18n } from '../i18n.js'
 
 defineEmits(['edit-task'])
 
 const store = useTaskStore()
+const { t } = useI18n()
 
-const statusFilters = [
-  { label: '全部', value: 'all' },
-  { label: '待办', value: 'todo' },
-  { label: '进行中', value: 'inprogress' },
-  { label: '已完成', value: 'done' },
-]
+const statusFilters = computed(() => [
+  { label: t('filterAll'),        value: 'all' },
+  { label: t('filterTodo'),       value: 'todo' },
+  { label: t('filterInProgress'), value: 'inprogress' },
+  { label: t('filterDone'),       value: 'done' },
+])
 
 const activeFilter = ref('all')
 const tagFilter = ref('')
@@ -97,7 +99,7 @@ const filtered = computed(() => {
   padding: 9px 12px 8px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--layer1-border);
-  background: rgba(48, 57, 68, 0.72);
+  background: var(--filter-bar-bg);
 }
 
 .filter-btn {
