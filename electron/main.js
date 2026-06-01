@@ -85,7 +85,7 @@ async function createWindow() {
     transparent: true,
     hasShadow: false,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: true,    // false 会锁死 min/maxSize，导致 setSize 被 Windows 拒绝
     maximizable: false,
     skipTaskbar: false,
     show: false,
