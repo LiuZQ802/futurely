@@ -4,7 +4,7 @@
   "description": "桌面任务清单",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"node_modules/electron/dist/electron.exe .\"",
+    "dev": "concurrently -k \"vite\" \"node scripts/dev.js\"",
     "build": "vite build",
     "electron": "electron .",
     "pack": "vite build && electron-builder"
