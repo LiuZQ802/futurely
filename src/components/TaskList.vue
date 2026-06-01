@@ -99,44 +99,43 @@ const filtered = computed(() => {
 }
 
 .filter-btn {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-secondary);
+  background: #1a2840;
+  border: 1.5px solid #3d5878;
+  color: #8ab0d0;
   font-size: 11px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
+  font-weight: 500;
 }
-
 .filter-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.12);
+  color: #ddeeff;
+  border-color: #5a80a8;
+  background: #1f3050;
 }
-
 .filter-btn.active {
-  background: var(--accent);
-  color: white;
-  border-color: transparent;
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #6366f1;
+  font-weight: 600;
 }
 
 .tag-select {
   margin-left: auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
+  background: #1a2840;
+  border: 1.5px solid #3d5878;
+  color: #8ab0d0;
   font-size: 11px;
-  padding: 3px 6px;
-  border-radius: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
   cursor: pointer;
   outline: none;
   font-family: inherit;
 }
-
-.tag-select option {
-  background: #1e293b;
-}
+.tag-select:focus { border-color: #818cf8; }
+.tag-select option { background: #1a2840; color: #e8f0fb; }
 
 .list {
   flex: 1;
