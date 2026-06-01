@@ -42,8 +42,8 @@ const defaultData = {
   },
 }
 
-// ── 生成托盘图标（深靛蓝圆形 + 白色 F，无外部依赖）────────────
-function makeTrayIcon() {
+// ── 生成应用图标（深靛蓝圆形 + 白色 F，托盘和任务栏共用）───────
+function makeAppIcon() {
   const T = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
     let c = n
@@ -289,6 +289,7 @@ async function createWindow() {
 
   mainWindow = new BrowserWindow({
     width, height, x, y,
+    icon: makeAppIcon(),
     frame: false,
     transparent: true,
     hasShadow: false,
@@ -369,8 +370,7 @@ async function createWindow() {
 }
 
 function createTray() {
-  const icon = makeTrayIcon()
-  tray = new Tray(icon)
+  tray = new Tray(makeAppIcon())
   tray.setToolTip(APP_NAME)
 
   const menu = Menu.buildFromTemplate([
