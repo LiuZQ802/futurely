@@ -223,13 +223,13 @@ ipcMain.handle('window:startDrag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
   const initBounds = mainWindow.getBounds()
   const initMouse = screen.getCursorScreenPoint()
-  const scale = screen.getPrimaryDisplay().scaleFactor
+  // getCursorScreenPoint 和 getBounds 都是逻辑像素（DIP），无需换算
   let hasMoved = false
 
   dragTimer = setInterval(() => {
     const cur = screen.getCursorScreenPoint()
-    const dx = (cur.x - initMouse.x) / scale
-    const dy = (cur.y - initMouse.y) / scale
+    const dx = cur.x - initMouse.x
+    const dy = cur.y - initMouse.y
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
     hasMoved = true
     const w = isCollapsed ? MINI_SIZE : initBounds.width
@@ -255,13 +255,12 @@ ipcMain.handle('window:stopDrag', () => {
 ipcMain.handle('window:startResize', (_, dir) => {
   const initBounds = mainWindow.getBounds()
   const initMouse = screen.getCursorScreenPoint()
-  const scale = screen.getPrimaryDisplay().scaleFactor
   resizeState = { dir, initBounds, initMouse }
 
   resizeTimer = setInterval(() => {
     const mouse = screen.getCursorScreenPoint()
-    const dx = (mouse.x - initMouse.x) / scale   // 物理→逻辑像素
-    const dy = (mouse.y - initMouse.y) / scale
+    const dx = mouse.x - initMouse.x
+    const dy = mouse.y - initMouse.y
 
     let { x, y, width, height } = initBounds
     const MIN_W = 280, MIN_H = 360
