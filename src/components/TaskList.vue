@@ -2,19 +2,29 @@
   <div class="task-list-wrap">
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <button
-        v-for="s in statusFilters"
-        :key="s.value"
-        class="filter-btn"
-        :class="{ active: activeFilter === s.value }"
-        @click="activeFilter = s.value"
-      >
-        {{ s.label }}
+      <template v-if="!searching">
+        <button
+          v-for="s in statusFilters"
+          :key="s.value"
+          class="filter-btn"
+          :class="{ active: activeFilter === s.value }"
+          @click="activeFilter = s.value"
+        >{{ s.label }}</button>
+        <select v-model="tagFilter" class="tag-select">
+          <option value="">{{ t('allTags') }}</option>
+          <option v-for="tag in store.tags" :key="tag" :value="tag">{{ tag }}</option>
+        </select>
+      </template>
+      <input
+        v-else
+        ref="searchInput"
+        v-model="searchQuery"
+        class="search-input"
+        :placeholder="t('searchPlaceholder')"
+      />
+      <button class="search-btn" :class="{ active: searching }" @click="toggleSearch">
+        {{ searching ? '✕' : '🔍' }}
       </button>
-      <select v-model="tagFilter" class="tag-select">
-        <option value="">{{ t('allTags') }}</option>
-        <option v-for="t in store.tags" :key="t" :value="t">{{ t }}</option>
-      </select>
     </div>
 
     <!-- 列表 -->
@@ -35,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
@@ -53,19 +63,35 @@ const statusFilters = computed(() => [
 ])
 
 const activeFilter = ref('all')
-const tagFilter = ref('')
+const tagFilter    = ref('')
+const searching    = ref(false)
+const searchQuery  = ref('')
+const searchInput  = ref(null)
+
+function toggleSearch() {
+  searching.value = !searching.value
+  searchQuery.value = ''
+  if (searching.value) nextTick(() => searchInput.value?.focus())
+}
 
 const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 }
 
 const filtered = computed(() => {
   let list = [...store.tasks]
 
-  if (activeFilter.value !== 'all') {
-    list = list.filter((t) => t.status === activeFilter.value)
-  }
-
-  if (tagFilter.value) {
-    list = list.filter((t) => t.tags?.includes(tagFilter.value))
+  if (searching.value && searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(t =>
+      t.title?.toLowerCase().includes(q) ||
+      t.notes?.toLowerCase().includes(q)
+    )
+  } else {
+    if (activeFilter.value !== 'all') {
+      list = list.filter((t) => t.status === activeFilter.value)
+    }
+    if (tagFilter.value) {
+      list = list.filter((t) => t.tags?.includes(tagFilter.value))
+    }
   }
 
   return list.sort((a, b) => {
@@ -124,6 +150,32 @@ const filtered = computed(() => {
   border-color: var(--accent);
   font-weight: 600;
 }
+
+.search-input {
+  flex: 1;
+  background: var(--layer3);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--t1);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+  font-family: inherit;
+}
+.search-input::placeholder { color: var(--t3); }
+
+.search-btn {
+  background: transparent;
+  border: none;
+  color: var(--t2);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.search-btn:hover, .search-btn.active { color: var(--t1); background: var(--layer1-hover); }
 
 .tag-select {
   margin-left: auto;

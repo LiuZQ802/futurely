@@ -20,6 +20,16 @@
           @open-about="showAbout = true"
           @add-task="showForm = true"
         />
+        <!-- 工作目录快捷栏 -->
+        <div v-if="workDirs.length" class="work-dirs-bar">
+          <button
+            v-for="dir in workDirs"
+            :key="dir"
+            class="dir-chip"
+            :title="dir"
+            @click="openDir(dir)"
+          >📁 {{ basename(dir) }}</button>
+        </div>
         <div class="body">
           <TaskList @edit-task="openEdit" />
         </div>
@@ -42,18 +52,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import MiniButton from './MiniButton.vue'
 import WidgetHeader from './WidgetHeader.vue'
 import TaskList from './TaskList.vue'
 import TaskForm from './TaskForm.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import AboutPanel from './AboutPanel.vue'
+import { useTaskStore } from '../store/tasks.js'
 
+const store = useTaskStore()
 const collapsed = ref(false)
 const showForm = ref(false)
 const showSettings = ref(false)
 const showAbout = ref(false)
+
+const workDirs = computed(() => store.settings.workDirs ?? [])
+function basename(p) { return p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p }
+function openDir(p)  { window.electronAPI?.openPath(p) }
 const editingTask = ref(null)
 
 const resizeDirs = ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se']
@@ -84,6 +100,12 @@ onMounted(() => {
     if (!collapsed.value && !showForm.value && !showSettings.value && !showAbout.value) {
       collapse()
     }
+  })
+
+  // 托盘「新建任务」快捷入口
+  window.electronAPI?.onOpenAddForm(() => {
+    collapsed.value = false
+    showForm.value = true
   })
 })
 
@@ -126,6 +148,32 @@ async function startResize(dir, e) {
   flex-direction: column;
   overflow: hidden;
 }
+
+.work-dirs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--layer1-border);
+  background: var(--filter-bar-bg);
+  flex-shrink: 0;
+}
+.dir-chip {
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dir-chip:hover { color: var(--t1); border-color: var(--accent); }
 
 .body {
   flex: 1;

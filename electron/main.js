@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const zlib = require('zlib')
@@ -395,12 +395,19 @@ function createTray() {
   tray.setToolTip(APP_NAME)
 
   const menu = Menu.buildFromTemplate([
-    { label: '显示 / 隐藏', click: () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show() },
+    { label: '显示 / 隐藏',  click: () => { mainWindow.show(); mainWindow.focus() } },
+    { label: '新建任务',     click: () => {
+      mainWindow.show(); mainWindow.focus()
+      mainWindow.webContents.send('open-add-form')
+    }},
     { type: 'separator' },
     { label: '退出', click: () => app.quit() },
   ])
   tray.setContextMenu(menu)
-  tray.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show())
+  tray.on('click', () => {
+    if (mainWindow.isVisible() && mainWindow.isFocused()) mainWindow.hide()
+    else { mainWindow.show(); mainWindow.focus() }
+  })
 }
 
 // ── IPC ───────────────────────────────────────────────
@@ -559,9 +566,50 @@ app.whenReady().then(async () => {
   app.setName(APP_NAME)
   await createWindow()
   createTray()
+
+  // 应用保存的开机自启设置
+  const data = loadData()
+  if (data.settings.autoLaunch !== undefined) {
+    app.setLoginItemSettings({ openAtLogin: !!data.settings.autoLaunch })
+  }
+
+  // 启动 5 秒后静默检测更新
+  setTimeout(async () => {
+    try {
+      const res  = await net.fetch('https://api.github.com/repos/LiuZQ802/futurely/releases/latest',
+        { headers: { 'User-Agent': 'Futurely-App' } })
+      const json = await res.json()
+      const latest  = (json.tag_name ?? '').replace(/^v/, '')
+      const current = app.getVersion()
+      if (latest && latest !== current && mainWindow && !mainWindow.isDestroyed()) {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          buttons: ['下载更新', '稍后'],
+          defaultId: 0,
+          title: `${APP_NAME} 有新版本`,
+          message: `发现新版本 v${latest}`,
+          detail: `当前版本：v${current}\n点击「下载更新」前往下载页面。`,
+        })
+        if (response === 0) shell.openExternal(json.html_url)
+      }
+    } catch {}
+  }, 5000)
 })
 
 ipcMain.handle('app:version', () => app.getVersion())
+
+ipcMain.handle('app:setAutoLaunch', (_, enable) => {
+  app.setLoginItemSettings({ openAtLogin: !!enable })
+})
+
+ipcMain.handle('dialog:selectFolder', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  })
+  return canceled ? null : filePaths[0]
+})
+
+ipcMain.handle('shell:openPath', (_, p) => shell.openPath(p))
 
 ipcMain.handle('app:checkUpdate', async () => {
   try {

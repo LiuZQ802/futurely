@@ -9,10 +9,12 @@ export const useTaskStore = defineStore('tasks', () => {
   const settings = ref({
     notifyHoursBefore:   1,
     notifyMinutesBefore: 0,
-    lang:  'zh',
-    theme: 'dark',
-    position: null,
-    collapsed: false,
+    lang:       'zh',
+    theme:      'dark',
+    autoLaunch: false,
+    workDirs:   [],   // string[]，每项为目录绝对路径
+    position:   null,
+    collapsed:  false,
     windowSize: { width: 340, height: 520 },
   })
 
