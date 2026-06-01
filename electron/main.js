@@ -102,15 +102,22 @@ function saveData(data) {
 }
 
 function checkDeadlines(data) {
+  const now   = new Date()
   const today = new Date(); today.setHours(0,0,0,0)
   const n = data.settings.notifyDaysBefore ?? 1
 
   data.tasks.forEach((task) => {
     if (task.status === 'done' || !task.deadline) return
-    const deadline = new Date(task.deadline); deadline.setHours(0,0,0,0)
-    const diff = Math.round((deadline - today) / 86400000)
+    const deadline = new Date(task.deadline)
+    const dayD = new Date(task.deadline); dayD.setHours(0,0,0,0)
+    const diff = Math.round((dayD - today) / 86400000)
+
     if (diff >= 0 && diff <= n) {
-      const label = diff === 0 ? '今天截止' : `还有 ${diff} 天截止`
+      const hasTime = task.deadline.includes('T')
+      const timePart = hasTime
+        ? ` ${String(deadline.getHours()).padStart(2,'0')}:${String(deadline.getMinutes()).padStart(2,'0')}`
+        : ''
+      const label = diff === 0 ? `今天${timePart}截止` : `还有 ${diff} 天${timePart}截止`
       new Notification({
         title: `${APP_NAME} · 任务提醒`,
         body: `「${task.title}」${label}`,

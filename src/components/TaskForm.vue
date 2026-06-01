@@ -33,8 +33,8 @@
         </div>
 
         <div class="field">
-          <label>截止日期</label>
-          <input type="date" v-model="form.deadline" />
+          <label>截止时间</label>
+          <input type="datetime-local" v-model="form.deadline" />
         </div>
 
         <div class="field">
@@ -133,7 +133,7 @@ function remove() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.34);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,7 +151,7 @@ function remove() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  box-shadow: 0 16px 44px rgba(0,0,0,0.32);
 }
 
 .form-header {
@@ -162,7 +162,7 @@ function remove() {
   border-bottom: 1px solid var(--layer2-border);
   background: var(--layer2-header);
   color: var(--t1);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -170,7 +170,7 @@ function remove() {
 .close-btn {
   background: transparent;
   border: none;
-  color: #7a9ab8;
+  color: var(--t2);
   cursor: pointer;
   font-size: 15px;
   width: 24px; height: 24px;
@@ -178,7 +178,7 @@ function remove() {
   display: flex; align-items: center; justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
-.close-btn:hover { background: rgba(255,255,255,0.1); color: #e2eaf6; }
+.close-btn:hover { background: rgba(255,255,255,0.08); color: var(--t1); }
 
 .form-body {
   padding: 14px;
@@ -194,19 +194,19 @@ function remove() {
 
 label {
   color: var(--t2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 input, select, textarea {
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--t1);
-  font-size: 12px;
-  padding: 7px 10px;
+  font-size: 13px;
+  padding: 8px 10px;
   outline: none;
   transition: border-color 0.15s;
   width: 100%;
@@ -214,15 +214,29 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--t3); }
 
+/* 日期/时间选择器图标 — 变白使其在深色背景上清晰可见 */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(0.75);
+  cursor: pointer;
+  opacity: 0.85;
+  padding: 2px;
+  border-radius: 3px;
+  transition: opacity 0.15s;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: brightness(0) invert(1);
+}
+
 select option { background: var(--layer3); color: var(--t1); }
 textarea { resize: none; }
 
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .tag-chip {
-  font-size: 11px;
+  font-size: 12px;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--layer3);
   border: 1px solid var(--layer3-border);
   color: var(--t2);
@@ -250,23 +264,23 @@ textarea { resize: none; }
 button {
   font-family: inherit;
   cursor: pointer;
-  border-radius: 6px;
-  font-size: 12px;
-  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 7px 14px;
   border: none;
   transition: all 0.15s;
 }
 
-.btn-save { background: #6366f1; color: #fff; font-weight: 600; }
-.btn-save:hover { background: #818cf8; }
+.btn-save { background: var(--accent); color: #061513; font-weight: 700; }
+.btn-save:hover { background: var(--accent-hover); }
 .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-cancel {
-  background: #1a2840;
-  color: #8ab0d0;
-  border: 1.5px solid #3d5878;
+  background: var(--layer3);
+  color: var(--t2);
+  border: 1px solid var(--layer3-border);
 }
-.btn-cancel:hover { color: #e2eaf6; border-color: #6080a0; }
+.btn-cancel:hover { color: var(--t1); border-color: #7a8798; }
 
 .btn-danger {
   background: rgba(248,113,113,0.15);
