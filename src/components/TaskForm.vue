@@ -133,7 +133,7 @@ function remove() {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0,0,0,0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,71 +141,59 @@ function remove() {
   border-radius: var(--radius);
 }
 
+/* 表单面板：中亮蓝灰，明显区别于主窗口深色 */
 .form-panel {
-  background: #1e293b;  /* slate-800 — 比主窗口亮一档，层次感清晰 */
-  border: 1px solid rgba(148,163,184,0.25);
+  background: #243147;
+  border: 1px solid #4a6080;
   border-radius: var(--radius);
   width: 90%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 16px 56px rgba(0,0,0,0.7);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
 }
 
 .form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid #334155;  /* slate-700 */
-  color: #f1f5f9;
+  padding: 11px 14px;
+  border-bottom: 1px solid #3a5070;
+  background: #1c2a3e;
+  color: #e2eaf6;
   font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
-  background: #162032;  /* 标题栏略深 */
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: #7a9ab8;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 4px;
+  font-size: 15px;
+  width: 24px; height: 24px;
   border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
-
-.close-btn:hover { color: var(--text-primary); }
+.close-btn:hover { background: rgba(255,255,255,0.1); color: #e2eaf6; }
 
 .form-body {
-  padding: 12px 14px;
+  padding: 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.field.row {
-  flex-direction: row;
-  gap: 10px;
-}
-
-.sub-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field.row { flex-direction: row; gap: 10px; }
+.sub-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
 
 label {
-  color: #94a3b8;       /* slate-400 */
+  color: #a8c4e0;     /* 亮蓝灰 — 清晰可见 */
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -213,53 +201,42 @@ label {
 }
 
 input, select, textarea {
-  background: #0f172a;  /* slate-950 — 深色输入框，与面板形成层次 */
-  border: 1px solid #334155;  /* slate-700 */
+  background: #1a2840;   /* 比面板深一级 */
+  border: 1.5px solid #3d5878;
   border-radius: 6px;
-  color: #f1f5f9;       /* slate-100 */
+  color: #e8f0fb;         /* 亮白蓝 */
   font-size: 12px;
-  padding: 7px 9px;
+  padding: 7px 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
   width: 100%;
 }
-
 input:focus, select:focus, textarea:focus {
-  border-color: #818cf8;  /* indigo-400 */
+  border-color: #818cf8;
+  background: #1f3050;
 }
+input::placeholder, textarea::placeholder { color: #4a6480; }
 
-input::placeholder, textarea::placeholder { color: #475569; /* slate-600 */ }
-
-input:focus, select:focus, textarea:focus {
-  border-color: var(--border-focus);
-}
-
-select option { background: #1e293b; color: #f1f5f9; }
-
+select option { background: #1a2840; color: #e8f0fb; }
 textarea { resize: none; }
 
-.tags-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .tag-chip {
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #1a2840;
+  border: 1.5px solid #3d5878;
+  color: #8ab0d0;
   cursor: pointer;
   transition: all 0.15s;
 }
-
-.tag-chip:hover { border-color: var(--accent); }
+.tag-chip:hover { border-color: #818cf8; color: #c4b5fd; }
 .tag-chip.active {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: var(--accent);
-  color: #a5b4fc;
+  background: rgba(129,140,248,0.2);
+  border-color: #818cf8;
+  color: #c4b5fd;
 }
 
 .form-footer {
@@ -267,11 +244,10 @@ textarea { resize: none; }
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  border-top: 1px solid #334155;
+  border-top: 1px solid #3a5070;
+  background: #1c2a3e;
   flex-shrink: 0;
-  background: #162032;
 }
-
 .footer-right { display: flex; gap: 8px; }
 
 button {
@@ -284,24 +260,21 @@ button {
   transition: all 0.15s;
 }
 
-.btn-save {
-  background: var(--accent);
-  color: white;
-}
-.btn-save:hover { background: var(--accent-hover); }
+.btn-save { background: #6366f1; color: #fff; font-weight: 600; }
+.btn-save:hover { background: #818cf8; }
 .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-cancel {
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  background: #1a2840;
+  color: #8ab0d0;
+  border: 1.5px solid #3d5878;
 }
-.btn-cancel:hover { color: var(--text-primary); }
+.btn-cancel:hover { color: #e2eaf6; border-color: #6080a0; }
 
 .btn-danger {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(248,113,113,0.15);
   color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1.5px solid rgba(248,113,113,0.35);
 }
-.btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+.btn-danger:hover { background: rgba(248,113,113,0.28); }
 </style>
