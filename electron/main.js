@@ -93,36 +93,40 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,   // Electron 28 默认开 sandbox 导致 preload 无法加载
     },
   })
   flog('BrowserWindow created')
 
+  // ready-to-show 必须在 loadURL 之前注册，否则可能错过事件
+  mainWindow.once('ready-to-show', () => {
+    flog('ready-to-show fired, calling show()')
+    mainWindow.show()
+    checkDeadlines(data)
+  })
+
   if (isDev) {
     flog('dev mode, polling Vite...')
-    // 轮询等待 Vite 开发服务器就绪（最多等 15 秒）
     let loaded = false
     for (let i = 0; i < 30; i++) {
       try {
         await mainWindow.loadURL('http://localhost:5173')
+        flog(`loadURL succeeded on attempt ${i + 1}`)
         loaded = true
         break
       } catch (e) {
+        flog(`loadURL attempt ${i + 1} failed: ${e.message}`)
         await new Promise(r => setTimeout(r, 500))
       }
     }
     if (!loaded) {
-      console.error('[main] 无法连接 Vite 开发服务器')
+      flog('ERROR: Could not connect to Vite')
       app.quit()
       return
     }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show()
-    checkDeadlines(data)
-  })
 
   // 禁止页面缩放
   mainWindow.webContents.on('did-finish-load', () => {
@@ -180,7 +184,9 @@ ipcMain.handle('window:collapse', () => {
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
   collapsedPos = mainWindow.getPosition()
+  flog(`collapse: before=${JSON.stringify(mainWindow.getBounds())}`)
   mainWindow.setSize(MINI_SIZE, MINI_SIZE)
+  flog(`collapse: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
 ipcMain.handle('window:expand', () => {
