@@ -142,8 +142,8 @@ function remove() {
 }
 
 .form-panel {
-  background: #0f1b30;
-  border: 1px solid rgba(255,255,255,0.22);
+  background: #1e293b;  /* slate-800 — 比主窗口亮一档，层次感清晰 */
+  border: 1px solid rgba(148,163,184,0.25);
   border-radius: var(--radius);
   width: 90%;
   max-height: 85vh;
@@ -158,11 +158,12 @@ function remove() {
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-primary);
+  border-bottom: 1px solid #334155;  /* slate-700 */
+  color: #f1f5f9;
   font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
+  background: #162032;  /* 标题栏略深 */
 }
 
 .close-btn {
@@ -204,7 +205,7 @@ function remove() {
 }
 
 label {
-  color: #7eb8e8;
+  color: #94a3b8;       /* slate-400 */
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -212,29 +213,28 @@ label {
 }
 
 input, select, textarea {
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: #0f172a;  /* slate-950 — 深色输入框，与面板形成层次 */
+  border: 1px solid #334155;  /* slate-700 */
   border-radius: 6px;
-  color: #ffffff;
+  color: #f1f5f9;       /* slate-100 */
   font-size: 12px;
   padding: 7px 9px;
   outline: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s;
   width: 100%;
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: #6366f1;
-  background: rgba(255,255,255,0.13);
+  border-color: #818cf8;  /* indigo-400 */
 }
 
-input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.35); }
+input::placeholder, textarea::placeholder { color: #475569; /* slate-600 */ }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
 }
 
-select option { background: #0f1b30; color: #ffffff; }
+select option { background: #1e293b; color: #f1f5f9; }
 
 textarea { resize: none; }
 
@@ -267,8 +267,9 @@ textarea { resize: none; }
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #334155;
   flex-shrink: 0;
+  background: #162032;
 }
 
 .footer-right { display: flex; gap: 8px; }

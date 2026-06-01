@@ -1,35 +1,37 @@
 :root {
-  /* 主窗口背景 - 更深更不透明，防止背景干扰阅读 */
-  --bg-base:       rgba(8, 14, 30, 0.93);
-  --bg-card:       rgba(255, 255, 255, 0.08);
-  --bg-card-hover: rgba(255, 255, 255, 0.14);
-  --border:        rgba(255, 255, 255, 0.18);
-  --border-focus:  #6366f1;
+  /* ── 主窗口：slate-900 半透明，让毛玻璃效果透出来 ── */
+  --bg-base:       rgba(15, 23, 42, 0.82);   /* slate-900 @ 82% */
+  --bg-card:       rgba(30, 41, 59, 0.65);   /* slate-800 @ 65% */
+  --bg-card-hover: rgba(30, 41, 59, 0.90);
+  --border:        rgba(148, 163, 184, 0.18); /* slate-400 淡边框 */
+  --border-focus:  #818cf8;                   /* indigo-400 */
 
-  /* 文字 - 纯白主文字，确保最高可读性 */
-  --text-primary:   #ffffff;
-  --text-secondary: #b8cfe8;
-  --text-muted:     #6b82a0;
+  /* ── 文字：slate 色系，层次清晰 ── */
+  --text-primary:   #f1f5f9;  /* slate-100 — 主文字，柔和不刺眼 */
+  --text-secondary: #94a3b8;  /* slate-400 — 次要文字 */
+  --text-muted:     #475569;  /* slate-600 — 提示文字 */
 
-  --accent:       #6366f1;
-  --accent-hover: #818cf8;
+  /* ── 强调色 ── */
+  --accent:       #818cf8;  /* indigo-400 */
+  --accent-hover: #a5b4fc;  /* indigo-300 */
 
-  /* 优先级颜色 - 更饱和 */
-  --priority-urgent: #f87171;
-  --priority-high:   #fbbf24;
-  --priority-medium: #60a5fa;
-  --priority-low:    #94a3b8;
+  /* ── 优先级 — 饱和度适中，深色背景上清晰可辨 ── */
+  --priority-urgent: #f87171;  /* red-400    */
+  --priority-high:   #fbbf24;  /* amber-400  */
+  --priority-medium: #60a5fa;  /* blue-400   */
+  --priority-low:    #94a3b8;  /* slate-400  */
 
-  --priority-urgent-bg: rgba(248,113,113,0.18);
-  --priority-high-bg:   rgba(251,191,36,0.15);
-  --priority-medium-bg: rgba(96,165,250,0.15);
-  --priority-low-bg:    rgba(148,163,184,0.10);
+  --priority-urgent-bg: rgba(248, 113, 113, 0.15);
+  --priority-high-bg:   rgba(251, 191,  36, 0.12);
+  --priority-medium-bg: rgba( 96, 165, 250, 0.12);
+  --priority-low-bg:    rgba(148, 163, 184, 0.08);
 
-  --status-todo:       #94a3b8;
-  --status-inprogress: #60a5fa;
-  --status-done:       #4ade80;
+  /* ── 状态色 ── */
+  --status-todo:       #64748b;  /* slate-500  */
+  --status-inprogress: #60a5fa;  /* blue-400   */
+  --status-done:       #4ade80;  /* green-400  */
 
-  --shadow:    0 4px 28px rgba(0,0,0,0.55);
+  --shadow:    0 4px 24px rgba(0,0,0,0.50);
   --radius:    12px;
   --radius-sm: 7px;
 }
@@ -48,4 +50,4 @@ input, textarea, select { user-select: text; font-family: inherit; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 2px; }
