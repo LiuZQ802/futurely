@@ -9,5 +9,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopDrag:       ()      => ipcRenderer.invoke('window:stopDrag'),
   startResize:    (dir)   => ipcRenderer.invoke('window:startResize', dir),
   stopResize:     ()      => ipcRenderer.invoke('window:stopResize'),
-  onWindowBlur:   (cb)    => ipcRenderer.on('window-blur', cb),
+  onWindowBlur:     (cb)  => ipcRenderer.on('window-blur', cb),
+  onSnapChanged:    (cb)  => ipcRenderer.on('snap-changed', (_, v) => cb(v)),
+  getSnapState:     ()    => ipcRenderer.invoke('window:getSnapState'),
+  snapToNearest:    ()    => ipcRenderer.invoke('window:snapToNearest'),
+  unsnap:           ()    => ipcRenderer.invoke('window:unsnap'),
+  toggleAutoHide:   ()    => ipcRenderer.invoke('window:toggleAutoHide'),
 })

@@ -13,6 +13,17 @@ let resizeState = null
 let isCollapsed = false
 let dragTimer = null
 
+// ── 吸附 / 贴边隐藏 ──
+let snapEdge       = null   // 'left'|'right'|'top'|'bottom'|null
+let autoHide       = false  // 贴边自动隐藏开关
+let slideHidden    = false  // 当前是否已缩到边缘
+let slideAnim      = null   // 滑动动画 timer
+let hideDelayTimer = null   // 隐藏延迟 timer
+let edgeMonitor    = null   // 鼠标边缘监测 timer
+const SNAP_DIST    = 30     // 距边缘多少 px 触发吸附
+const SLIVER       = 4      // 隐藏后露出的宽度(px)
+const HIDE_DELAY   = 800    // 离开后多少 ms 开始隐藏
+
 const MINI_SIZE = 64
 const APP_NAME  = '桌面清单'
 const dataPath  = path.join(app.getPath('userData'), 'tasks.json')
@@ -88,6 +99,135 @@ function makeTrayIcon() {
     chunk('IEND', Buffer.alloc(0)),
   ])
   return nativeImage.createFromBuffer(png, { scaleFactor: 1 })
+}
+
+// ── 吸附 / 贴边隐藏 工具函数 ──────────────────────────
+
+function workArea() { return screen.getPrimaryDisplay().workArea }
+
+/** 计算吸附到指定边缘时窗口应处于的坐标 */
+function snappedBounds(edge, b) {
+  const wa = workArea()
+  return {
+    x:      edge === 'left'   ? wa.x
+           : edge === 'right'  ? wa.x + wa.width  - b.width  : b.x,
+    y:      edge === 'top'    ? wa.y
+           : edge === 'bottom' ? wa.y + wa.height - b.height : b.y,
+    width:  b.width,
+    height: b.height,
+  }
+}
+
+/** 计算隐藏到边缘外（只露出 SLIVER px）时的坐标 */
+function hiddenBounds(edge, sb) {
+  const wa = workArea()
+  const h = { ...sb }
+  if (edge === 'left')   h.x = wa.x - sb.width  + SLIVER
+  if (edge === 'right')  h.x = wa.x + wa.width  - SLIVER
+  if (edge === 'top')    h.y = wa.y - sb.height + SLIVER
+  if (edge === 'bottom') h.y = wa.y + wa.height - SLIVER
+  return h
+}
+
+/** 平滑滑动到目标位置（ease-out cubic，约 180ms）*/
+function animateTo(target, onDone) {
+  if (slideAnim) { clearInterval(slideAnim); slideAnim = null }
+  const start = mainWindow.getBounds()
+  const STEPS = 11
+  let s = 0
+  slideAnim = setInterval(() => {
+    s++
+    const t = 1 - Math.pow(1 - s / STEPS, 3)
+    mainWindow.setBounds({
+      x:      Math.round(start.x      + (target.x      - start.x)      * t),
+      y:      Math.round(start.y      + (target.y      - start.y)      * t),
+      width:  Math.round(start.width  + (target.width  - start.width)  * t),
+      height: Math.round(start.height + (target.height - start.height) * t),
+    })
+    if (s >= STEPS) {
+      clearInterval(slideAnim); slideAnim = null
+      onDone?.()
+    }
+  }, 16)
+}
+
+/** 检查拖拽结束后是否贴近边缘，是则吸附 */
+function checkSnap() {
+  if (isCollapsed) return
+  const wa = workArea()
+  const b  = mainWindow.getBounds()
+  const gaps = {
+    left:   b.x - wa.x,
+    right:  wa.x + wa.width  - (b.x + b.width),
+    top:    b.y - wa.y,
+    bottom: wa.y + wa.height - (b.y + b.height),
+  }
+  let nearest = null, minD = SNAP_DIST
+  for (const [edge, d] of Object.entries(gaps)) {
+    if (Math.abs(d) < minD) { minD = Math.abs(d); nearest = edge }
+  }
+  if (nearest) {
+    snapEdge = nearest
+    animateTo(snappedBounds(nearest, b))
+    notifySnapChange()
+  }
+}
+
+function notifySnapChange() {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('snap-changed', { edge: snapEdge, autoHide, slideHidden })
+}
+
+/** 滑入（从隐藏态恢复到贴边可见） */
+function slideIn() {
+  if (!snapEdge || !slideHidden) return
+  if (hideDelayTimer) { clearTimeout(hideDelayTimer); hideDelayTimer = null }
+  const sb = snappedBounds(snapEdge, mainWindow.getBounds())
+  slideHidden = false
+  animateTo(sb)
+}
+
+/** 滑出（缩到边缘外只露 SLIVER px） */
+function slideOut() {
+  if (!snapEdge || slideHidden) return
+  const b  = mainWindow.getBounds()
+  const sb = snappedBounds(snapEdge, b)
+  const hb = hiddenBounds(snapEdge, sb)
+  slideHidden = true
+  animateTo(hb)
+}
+
+/** 开启鼠标监测，用于贴边自动隐藏 */
+function startEdgeMonitor() {
+  stopEdgeMonitor()
+  edgeMonitor = setInterval(() => {
+    if (!autoHide || !snapEdge || isCollapsed) return
+    const cursor = screen.getCursorScreenPoint()
+    const b  = mainWindow.getBounds()
+    const sb = snappedBounds(snapEdge, b)
+    const M  = 12  // 触发区域边距
+
+    const inZone = cursor.x >= sb.x - M && cursor.x <= sb.x + sb.width  + M
+                && cursor.y >= sb.y - M && cursor.y <= sb.y + sb.height + M
+
+    if (inZone && slideHidden) {
+      slideIn()
+    } else if (!inZone && !slideHidden && !slideAnim) {
+      if (!hideDelayTimer) {
+        hideDelayTimer = setTimeout(() => {
+          hideDelayTimer = null
+          slideOut()
+        }, HIDE_DELAY)
+      }
+    } else if (inZone && hideDelayTimer) {
+      clearTimeout(hideDelayTimer); hideDelayTimer = null
+    }
+  }, 80)
+}
+
+function stopEdgeMonitor() {
+  if (edgeMonitor) { clearInterval(edgeMonitor); edgeMonitor = null }
+  if (hideDelayTimer) { clearTimeout(hideDelayTimer); hideDelayTimer = null }
 }
 
 function loadData() {
@@ -251,7 +391,59 @@ ipcMain.handle('window:stopDrag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
   const moved = mainWindow._drag?.moved ?? false
   mainWindow._drag = null
+  // 拖拽结束后检测吸附
+  if (moved && !isCollapsed) {
+    // 先清除旧吸附状态
+    snapEdge = null
+    checkSnap()
+  }
   return moved
+})
+
+// ── 吸附 / 贴边隐藏 IPC ────────────────────────────
+
+ipcMain.handle('window:getSnapState', () => ({
+  edge: snapEdge, autoHide, slideHidden,
+}))
+
+/** 手动触发吸附到最近边缘 */
+ipcMain.handle('window:snapToNearest', () => {
+  snapEdge = null
+  checkSnap()
+})
+
+/** 取消吸附，恢复自由浮动 */
+ipcMain.handle('window:unsnap', () => {
+  stopEdgeMonitor()
+  if (slideHidden) slideIn()
+  setTimeout(() => {
+    snapEdge = null
+    autoHide = false
+    slideHidden = false
+    notifySnapChange()
+  }, slideHidden ? 220 : 0)
+})
+
+/** 切换贴边自动隐藏 */
+ipcMain.handle('window:toggleAutoHide', () => {
+  if (!snapEdge) return
+  autoHide = !autoHide
+  if (autoHide) {
+    startEdgeMonitor()
+    // 立刻触发一次隐藏（如果鼠标不在窗口上）
+    const cursor = screen.getCursorScreenPoint()
+    const b  = mainWindow.getBounds()
+    const sb = snappedBounds(snapEdge, b)
+    const inWin = cursor.x >= sb.x && cursor.x <= sb.x + sb.width
+               && cursor.y >= sb.y && cursor.y <= sb.y + sb.height
+    if (!inWin) setTimeout(() => slideOut(), HIDE_DELAY)
+  } else {
+    stopEdgeMonitor()
+    if (slideHidden) slideIn()
+    slideHidden = false
+  }
+  notifySnapChange()
+  return autoHide
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {
