@@ -151,7 +151,7 @@ function animateTo(target, onDone) {
   }, 16)
 }
 
-/** 检查拖拽结束后是否贴近边缘，是则吸附 */
+/** 检查拖拽结束后是否贴近边缘，是则吸附并自动滑入 */
 function checkSnap() {
   if (isCollapsed) return
   const wa = workArea()
@@ -168,7 +168,12 @@ function checkSnap() {
   }
   if (nearest) {
     snapEdge = nearest
-    animateTo(snappedBounds(nearest, b))
+    autoHide = true
+    // 先滑到贴边位置，300ms 后自动缩入
+    animateTo(snappedBounds(nearest, b), () => {
+      startEdgeMonitor()
+      setTimeout(() => slideOut(), 300)
+    })
     notifySnapChange()
   }
 }
@@ -369,6 +374,19 @@ ipcMain.handle('window:expand', () => {
 })
 
 ipcMain.handle('window:startDrag', () => {
+  // 如果当前贴边缩入，先取消吸附让窗口完全可见
+  if (snapEdge) {
+    stopEdgeMonitor()
+    if (slideHidden) {
+      const sb = snappedBounds(snapEdge, mainWindow.getBounds())
+      mainWindow.setBounds(sb)
+      slideHidden = false
+    }
+    snapEdge = null
+    autoHide = false
+    notifySnapChange()
+  }
+
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
   const initBounds = mainWindow.getBounds()
   const initMouse  = screen.getCursorScreenPoint()
