@@ -138,6 +138,10 @@ function hiddenBounds(edge, sb) {
 
 /** 平滑滑动到目标位置（ease-out cubic，约 180ms）*/
 function animateTo(target, onDone) {
+  if (!target || [target.x, target.y, target.width, target.height].some(v => !Number.isFinite(v))) {
+    onDone?.()
+    return
+  }
   if (slideAnim) { clearInterval(slideAnim); slideAnim = null }
   isOurMove = true
   const start = mainWindow.getBounds()
@@ -282,10 +286,15 @@ function checkDeadlines(data) {
 async function createWindow() {
   const data = loadData()
   const { width, height } = data.settings.windowSize
-  const display = screen.getPrimaryDisplay().workAreaSize
+  const wa = screen.getPrimaryDisplay().workArea
 
-  let x = data.settings.position?.x ?? display.width  - width  - 20
-  let y = data.settings.position?.y ?? display.height - height - 20
+  // 默认居中，避免初始位置落在 SNAP_DIST 范围内触发贴边
+  let x = data.settings.position?.x ?? Math.round(wa.x + (wa.width  - width)  / 2)
+  let y = data.settings.position?.y ?? Math.round(wa.y + (wa.height - height) / 2)
+
+  // 确保位置在屏幕可见区域内（其他用户分辨率不同时可能越界）
+  x = Math.max(wa.x, Math.min(x, wa.x + wa.width  - 100))
+  y = Math.max(wa.y, Math.min(y, wa.y + wa.height - 100))
 
   mainWindow = new BrowserWindow({
     width, height, x, y,

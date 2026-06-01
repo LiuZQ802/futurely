@@ -1,6 +1,6 @@
 {
   "name": "futurely",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A floating desktop task list with edge-snap",
   "author": "Ziqi Liu",
   "main": "electron/main.js",
