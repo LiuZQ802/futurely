@@ -2,6 +2,15 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeIma
 const path = require('path')
 const fs = require('fs')
 
+// 文件日志（绕过被吞掉的 stdout）
+const logFile = path.join(__dirname, '..', 'electron-debug.log')
+function flog(msg) { fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`) }
+
+flog('main.js top')
+flog(`require('electron') type: ${typeof require('electron')}`)
+flog(`app type: ${typeof app}`)
+flog(`app.isPackaged: ${app?.isPackaged}`)
+
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
 let mainWindow = null
@@ -58,12 +67,14 @@ function checkDeadlines(data) {
 }
 
 async function createWindow() {
+  flog('createWindow start')
   const data = loadData()
   const { width, height } = data.settings.windowSize
   const display = screen.getPrimaryDisplay().workAreaSize
 
   let x = data.settings.position?.x ?? display.width - width - 20
   let y = data.settings.position?.y ?? display.height - height - 20
+  flog(`initial size: ${width}x${height}, pos: ${x},${y}`)
 
   mainWindow = new BrowserWindow({
     width,
@@ -84,8 +95,10 @@ async function createWindow() {
       nodeIntegration: false,
     },
   })
+  flog('BrowserWindow created')
 
   if (isDev) {
+    flog('dev mode, polling Vite...')
     // 轮询等待 Vite 开发服务器就绪（最多等 15 秒）
     let loaded = false
     for (let i = 0; i < 30; i++) {
