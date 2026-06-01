@@ -18,6 +18,7 @@ let tray = null
 let collapsedPos = null
 let resizeTimer = null
 let resizeState = null
+let isCollapsed = false
 
 const MINI_SIZE = 64
 const dataPath = path.join(app.getPath('userData'), 'tasks.json')
@@ -146,6 +147,19 @@ async function createWindow() {
     if (!mainWindow || mainWindow.isDestroyed() || resizeState) return
     mainWindow.webContents.send('window-blur')
   })
+
+  // 防止 Windows Snap 把折叠窗口放大
+  mainWindow.on('maximize', () => {
+    if (isCollapsed) {
+      mainWindow.unmaximize()
+      mainWindow.setSize(MINI_SIZE, MINI_SIZE)
+    }
+  })
+  mainWindow.on('will-resize', (e, newBounds) => {
+    if (isCollapsed && (newBounds.width > MINI_SIZE || newBounds.height > MINI_SIZE)) {
+      e.preventDefault()
+    }
+  })
 }
 
 function createTray() {
@@ -183,27 +197,33 @@ ipcMain.handle('tasks:save', (_, data) => {
 ipcMain.handle('window:collapse', () => {
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
+  isCollapsed = true
   collapsedPos = mainWindow.getPosition()
-  flog(`collapse: before=${JSON.stringify(mainWindow.getBounds())}`)
+  // 先锁住最大尺寸，防止 Windows Snap 放大
+  mainWindow.setMaximumSize(MINI_SIZE, MINI_SIZE)
+  mainWindow.setMinimumSize(1, 1)
   mainWindow.setSize(MINI_SIZE, MINI_SIZE)
   flog(`collapse: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
 ipcMain.handle('window:expand', () => {
+  isCollapsed = false
   const data = loadData()
   const { width, height } = data.settings.windowSize
+  // 先清除尺寸约束，再放大
+  mainWindow.setMaximumSize(0, 0)
+  mainWindow.setMinimumSize(1, 1)
   mainWindow.setSize(width, height)
+  flog(`expand: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
 // 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
 ipcMain.handle('window:drag', (_, { mouseX, mouseY }) => {
   const b = mainWindow.getBounds()
-  mainWindow.setBounds({
-    x: b.x + mouseX,
-    y: b.y + mouseY,
-    width: b.width,
-    height: b.height,
-  })
+  // 折叠状态下强制保持 MINI_SIZE，防止 Snap 偷偷改了尺寸
+  const w = isCollapsed ? MINI_SIZE : b.width
+  const h = isCollapsed ? MINI_SIZE : b.height
+  mainWindow.setBounds({ x: b.x + mouseX, y: b.y + mouseY, width: w, height: h })
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {
