@@ -53,7 +53,7 @@ Download the latest `Futurely-Setup-x.x.x.exe` from [Releases](https://github.co
 
 ## Screenshots
 
-> *(Add screenshots here)*
+> ![image-20260601234144530](C:\Users\Ziqi Liu\AppData\Roaming\Typora\typora-user-images\image-20260601234144530.png)![image-20260601234102463](C:\Users\Ziqi Liu\AppData\Roaming\Typora\typora-user-images\image-20260601234102463.png![image-20260601234113010](C:\Users\Ziqi Liu\AppData\Roaming\Typora\typora-user-images\image-20260601234113010.png)![image-20260601234119926](C:\Users\Ziqi Liu\AppData\Roaming\Typora\typora-user-images\image-20260601234119926.png)
 
 ---
 
