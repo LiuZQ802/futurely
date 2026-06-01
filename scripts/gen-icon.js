@@ -24,33 +24,32 @@ function chunk(type, data) {
   return Buffer.concat([lb, tb, data, cb])
 }
 
-function distSeg(ax, ay, bx, by, px, py) {
-  const dx = bx - ax, dy = by - ay
-  const t  = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy)))
-  return Math.sqrt((px - ax - t*dx) ** 2 + (py - ay - t*dy) ** 2)
-}
-
 function makePng(S) {
-  const m  = Math.max(1, Math.round(S * 0.03))
-  const r  = Math.round(S * 0.19)   // corner radius
-  const sw = S * 0.072              // stroke half-width
-
-  // 勾选两段端点（归一化后按 S 缩放）
-  const ax1 = 0.26*S, ay1 = 0.50*S, ax2 = 0.42*S, ay2 = 0.68*S  // 短臂
-  const bx1 = ax2,    by1 = ay2,    bx2 = 0.74*S, by2 = 0.32*S  // 长臂
+  const m = Math.max(1, Math.round(S * 0.03))
+  const r = Math.round(S * 0.19)
 
   function inBg(x, y) {
-    const x0 = m, y0 = m, x1 = S - 1 - m, y1 = S - 1 - m
+    const x0 = m, y0 = m, x1 = S-1-m, y1 = S-1-m
     if (x < x0 || x > x1 || y < y0 || y > y1) return 0
-    const corners = [[x0+r, y0+r], [x1-r, y0+r], [x0+r, y1-r], [x1-r, y1-r]]
-    for (const [cx, cy] of corners) {
-      if (Math.abs(x - cx) > r || Math.abs(y - cy) > r) continue
-      const dist = Math.sqrt((x-cx)**2 + (y-cy)**2)
-      if (dist > r + 0.6) return 0
-      if (dist > r - 0.6) return Math.round((r + 0.6 - dist) / 1.2 * 255)
+    for (const [cx, cy] of [[x0+r,y0+r],[x1-r,y0+r],[x0+r,y1-r],[x1-r,y1-r]]) {
+      if (Math.abs(x-cx) <= r && Math.abs(y-cy) <= r) {
+        const d = Math.sqrt((x-cx)**2+(y-cy)**2)
+        if (d > r+0.6) return 0
+        if (d > r-0.6) return Math.round((r+0.6-d)/1.2*255)
+      }
     }
     return 255
   }
+
+  function inTriangle(px, py, ax, ay, bx, by, cx, cy) {
+    const s1=(bx-ax)*(py-ay)-(by-ay)*(px-ax)
+    const s2=(cx-bx)*(py-by)-(cy-by)*(px-bx)
+    const s3=(ax-cx)*(py-cy)-(ay-cy)*(px-cx)
+    return (s1>=0&&s2>=0&&s3>=0)||(s1<=0&&s2<=0&&s3<=0)
+  }
+
+  const TX = S*0.77, TY = S*0.50
+  const LX = S*0.28, LYT = S*0.25, LYB = S*0.75
 
   const raw = Buffer.allocUnsafe(S * (1 + S * 4))
   for (let y = 0; y < S; y++) {
@@ -59,12 +58,10 @@ function makePng(S) {
       const off = y * (1 + S * 4) + 1 + x * 4
       const a = inBg(x, y)
       if (!a) { raw[off]=raw[off+1]=raw[off+2]=raw[off+3]=0; continue }
-      const onCheck = distSeg(ax1, ay1, ax2, ay2, x, y) < sw
-                   || distSeg(bx1, by1, bx2, by2, x, y) < sw
-      if (onCheck) {
-        raw[off]=0xff; raw[off+1]=0xff; raw[off+2]=0xff; raw[off+3]=a
+      if (inTriangle(x+0.5, y+0.5, TX, TY, LX, LYT, LX, LYB)) {
+        raw[off]=0xfb; raw[off+1]=0xbf; raw[off+2]=0x24; raw[off+3]=a  // #fbbf24 amber
       } else {
-        raw[off]=0x10; raw[off+1]=0xb9; raw[off+2]=0x81; raw[off+3]=a  // #10b981
+        raw[off]=0x0f; raw[off+1]=0x17; raw[off+2]=0x2a; raw[off+3]=a  // #0f172a navy
       }
     }
   }

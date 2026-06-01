@@ -42,7 +42,7 @@ const defaultData = {
   },
 }
 
-// ── 生成应用图标（圆角方块 + 白色勾选）────────────────────────
+// ── 生成应用图标（深海军蓝圆角方块 + 金色右向三角，代表「面向未来」）──
 function makeAppIcon() {
   const T = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
@@ -64,33 +64,33 @@ function makeAppIcon() {
 
   const S = 32
 
-  // 圆角方块背景，corner radius = 6
+  // 圆角方块，radius = 6，边缘抗锯齿
   function inBg(x, y) {
     const m = 1, r = 6
-    const x0 = m, y0 = m, x1 = S - 1 - m, y1 = S - 1 - m
+    const x0 = m, y0 = m, x1 = S-1-m, y1 = S-1-m
     if (x < x0 || x > x1 || y < y0 || y > y1) return 0
-    const corners = [[x0+r, y0+r], [x1-r, y0+r], [x0+r, y1-r], [x1-r, y1-r]]
-    for (const [cx, cy] of corners) {
-      if (x < cx - r + 0.5 || x > cx + r - 0.5 || y < cy - r + 0.5 || y > cy + r - 0.5) continue
-      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-      if (dist > r + 0.5) return 0
-      if (dist > r - 0.5) return Math.round((r + 0.5 - dist) * 255)
+    for (const [cx, cy] of [[x0+r,y0+r],[x1-r,y0+r],[x0+r,y1-r],[x1-r,y1-r]]) {
+      if (Math.abs(x-cx) <= r && Math.abs(y-cy) <= r) {
+        const d = Math.sqrt((x-cx)**2+(y-cy)**2)
+        if (d > r+0.6) return 0
+        if (d > r-0.6) return Math.round((r+0.6-d)/1.2*255)
+      }
     }
     return 255
   }
 
-  // 白色勾选笔画（两段折线，distance-to-segment 方式）
-  function distSeg(ax, ay, bx, by, px, py) {
-    const dx = bx - ax, dy = by - ay
-    const t  = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / (dx*dx + dy*dy)))
-    return Math.sqrt((px - ax - t*dx) ** 2 + (py - ay - t*dy) ** 2)
+  // 点在三角形内（有符号面积法）
+  function inTriangle(px, py, ax, ay, bx, by, cx, cy) {
+    const s1=(bx-ax)*(py-ay)-(by-ay)*(px-ax)
+    const s2=(cx-bx)*(py-by)-(cy-by)*(px-bx)
+    const s3=(ax-cx)*(py-cy)-(ay-cy)*(px-cx)
+    return (s1>=0&&s2>=0&&s3>=0)||(s1<=0&&s2<=0&&s3<=0)
   }
-  function isCheck(x, y) {
-    const sw = 2.3
-    if (distSeg(8,  16, 13, 22, x, y) < sw) return true  // 短臂
-    if (distSeg(13, 22, 24, 11, x, y) < sw) return true  // 长臂
-    return false
-  }
+
+  // 右向三角箭头：尖端右，左侧上下两角
+  const TX = 24.5, TY = 16    // 尖端
+  const LX = 9,    LYT = 8    // 左上
+  const              LYB = 24  // 左下
 
   const ihdr = Buffer.allocUnsafe(13)
   ihdr.writeUInt32BE(S, 0); ihdr.writeUInt32BE(S, 4)
@@ -98,15 +98,15 @@ function makeAppIcon() {
 
   const raw = Buffer.allocUnsafe(S * (1 + S * 4))
   for (let y = 0; y < S; y++) {
-    raw[y * (1 + S*4)] = 0
+    raw[y*(1+S*4)] = 0
     for (let x = 0; x < S; x++) {
-      const off = y*(1+S*4) + 1 + x*4
+      const off = y*(1+S*4)+1+x*4
       const a = inBg(x, y)
       if (!a) { raw[off]=raw[off+1]=raw[off+2]=raw[off+3]=0; continue }
-      if (isCheck(x, y)) {
-        raw[off]=0xff; raw[off+1]=0xff; raw[off+2]=0xff; raw[off+3]=a
+      if (inTriangle(x+0.5, y+0.5, TX, TY, LX, LYT, LX, LYB)) {
+        raw[off]=0xfb; raw[off+1]=0xbf; raw[off+2]=0x24; raw[off+3]=a  // #fbbf24 amber
       } else {
-        raw[off]=0x10; raw[off+1]=0xb9; raw[off+2]=0x81; raw[off+3]=a  // #10b981 emerald
+        raw[off]=0x0f; raw[off+1]=0x17; raw[off+2]=0x2a; raw[off+3]=a  // #0f172a navy
       }
     }
   }

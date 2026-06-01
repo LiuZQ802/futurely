@@ -17,6 +17,7 @@
         <WidgetHeader
           @collapse="collapse"
           @open-settings="showSettings = true"
+          @open-about="showAbout = true"
           @add-task="showForm = true"
         />
         <div class="body">
@@ -34,6 +35,9 @@
 
     <!-- 设置面板 -->
     <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+
+    <!-- 关于面板 -->
+    <AboutPanel v-if="showAbout" @close="showAbout = false" />
   </div>
 </template>
 
@@ -44,10 +48,12 @@ import WidgetHeader from './WidgetHeader.vue'
 import TaskList from './TaskList.vue'
 import TaskForm from './TaskForm.vue'
 import SettingsPanel from './SettingsPanel.vue'
+import AboutPanel from './AboutPanel.vue'
 
 const collapsed = ref(false)
 const showForm = ref(false)
 const showSettings = ref(false)
+const showAbout = ref(false)
 const editingTask = ref(null)
 
 const resizeDirs = ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se']
@@ -75,7 +81,7 @@ function closeForm() {
 // 失焦自动折叠（弹窗打开时不折叠）
 onMounted(() => {
   window.electronAPI?.onWindowBlur(() => {
-    if (!collapsed.value && !showForm.value && !showSettings.value) {
+    if (!collapsed.value && !showForm.value && !showSettings.value && !showAbout.value) {
       collapse()
     }
   })

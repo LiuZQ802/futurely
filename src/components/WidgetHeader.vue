@@ -12,6 +12,7 @@
     <div class="actions">
       <button class="btn" :title="t('btnNewTask')"   @click="$emit('add-task')">＋</button>
       <button class="btn" :title="t('btnSettings')"  @click="$emit('open-settings')">⚙</button>
+      <button class="btn" :title="t('aboutSection')" @click="$emit('open-about')">ℹ</button>
       <button class="btn" :title="t('btnCollapse')"  @click="$emit('collapse')">—</button>
     </div>
   </div>
@@ -22,7 +23,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
 
-defineEmits(['collapse', 'open-settings', 'add-task'])
+defineEmits(['collapse', 'open-settings', 'open-about', 'add-task'])
 
 const store = useTaskStore()
 const { t, locale } = useI18n()
