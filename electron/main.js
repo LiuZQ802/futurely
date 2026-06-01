@@ -167,24 +167,13 @@ ipcMain.handle('window:collapse', () => {
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
   collapsedPos = mainWindow.getPosition()
-
-  // 必须先放开 resizable + 清掉 minimumSize，否则 setBounds 被系统拒绝
-  mainWindow.setResizable(true)
-  mainWindow.setMinimumSize(1, 1)
-  const b = mainWindow.getBounds()
-  mainWindow.setBounds({ x: b.x, y: b.y, width: MINI_SIZE, height: MINI_SIZE })
-  mainWindow.setResizable(false)
+  mainWindow.setSize(MINI_SIZE, MINI_SIZE)
 })
 
 ipcMain.handle('window:expand', () => {
   const data = loadData()
   const { width, height } = data.settings.windowSize
-
-  mainWindow.setResizable(true)
-  mainWindow.setMinimumSize(1, 1)
-  const b = mainWindow.getBounds()
-  mainWindow.setBounds({ x: b.x, y: b.y, width, height })
-  mainWindow.setResizable(false)
+  mainWindow.setSize(width, height)
 })
 
 // 拖拽移动：用 setBounds 保持大小不变（setPosition 在 Windows 上偶有副作用）
