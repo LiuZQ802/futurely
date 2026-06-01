@@ -19,7 +19,7 @@ let collapsedPos = null
 let resizeTimer = null
 let resizeState = null
 let isCollapsed = false
-let recordedPos = null
+let dragTimer = null
 
 const MINI_SIZE = 64
 const dataPath = path.join(app.getPath('userData'), 'tasks.json')
@@ -218,14 +218,38 @@ ipcMain.handle('window:expand', () => {
   flog(`expand: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
-// 点击检测：mousedown 时记位置，mouseup 时比较是否移动
-ipcMain.handle('window:recordPos', () => {
-  recordedPos = mainWindow.getPosition()
+// 拖拽：mousedown 立即启动，主进程轮询光标，stopDrag 返回是否移动过
+ipcMain.handle('window:startDrag', () => {
+  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
+  const initBounds = mainWindow.getBounds()
+  const initMouse = screen.getCursorScreenPoint()
+  const scale = screen.getPrimaryDisplay().scaleFactor
+  let hasMoved = false
+
+  dragTimer = setInterval(() => {
+    const cur = screen.getCursorScreenPoint()
+    const dx = (cur.x - initMouse.x) / scale
+    const dy = (cur.y - initMouse.y) / scale
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+    hasMoved = true
+    const w = isCollapsed ? MINI_SIZE : initBounds.width
+    const h = isCollapsed ? MINI_SIZE : initBounds.height
+    mainWindow.setBounds({
+      x: Math.round(initBounds.x + dx),
+      y: Math.round(initBounds.y + dy),
+      width: w, height: h,
+    })
+  }, 8)  // 8ms ≈ 120fps，比 16ms 更流畅
+
+  // 把 hasMoved 的引用传回给 stopDrag
+  mainWindow._dragState = { get hasMoved() { return hasMoved } }
 })
-ipcMain.handle('window:didMove', () => {
-  if (!recordedPos) return true
-  const [cx, cy] = mainWindow.getPosition()
-  return Math.abs(cx - recordedPos[0]) > 4 || Math.abs(cy - recordedPos[1]) > 4
+
+ipcMain.handle('window:stopDrag', () => {
+  if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
+  const moved = mainWindow._dragState?.hasMoved ?? false
+  mainWindow._dragState = null
+  return moved
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {

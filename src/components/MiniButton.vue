@@ -15,13 +15,12 @@ const count = computed(() => store.activeTasks.length)
 
 function onMouseDown(e) {
   if (e.button !== 0) return
-  // 记录 mousedown 时的窗口位置
-  window.electronAPI?.recordPos()
+  // 立即启动主进程轮询拖拽（不等移动阈值，消除初始偏移）
+  window.electronAPI?.startDrag()
 
   const onUp = async () => {
     window.removeEventListener('mouseup', onUp)
-    // 如果窗口没移动 → 是点击 → 展开
-    const moved = await window.electronAPI?.didMove()
+    const moved = await window.electronAPI?.stopDrag()
     if (!moved) emit('expand')
   }
   window.addEventListener('mouseup', onUp)
@@ -41,22 +40,15 @@ function onMouseDown(e) {
   cursor: grab;
   position: relative;
   transition: background 0.15s;
-  -webkit-app-region: drag;  /* OS 原生拖拽，零延迟零漂移 */
 }
 
-.mini:hover {
-  background: rgba(25, 38, 65, 0.90);
-}
-
-.mini:active {
-  cursor: grabbing;
-}
+.mini:hover { background: rgba(25, 38, 65, 0.90); }
+.mini:active { cursor: grabbing; }
 
 .icon {
   font-size: 24px;
   line-height: 1;
   pointer-events: none;
-  -webkit-app-region: no-drag;
 }
 
 .badge {
@@ -75,6 +67,5 @@ function onMouseDown(e) {
   justify-content: center;
   padding: 0 3px;
   pointer-events: none;
-  -webkit-app-region: no-drag;
 }
 </style>
