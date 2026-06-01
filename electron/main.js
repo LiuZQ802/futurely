@@ -1,15 +1,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
-
-// 文件日志（绕过被吞掉的 stdout）
-const logFile = path.join(__dirname, '..', 'electron-debug.log')
-function flog(msg) { fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`) }
-
-flog('main.js top')
-flog(`require('electron') type: ${typeof require('electron')}`)
-flog(`app type: ${typeof app}`)
-flog(`app.isPackaged: ${app?.isPackaged}`)
+const zlib = require('zlib')
 
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
@@ -22,7 +14,8 @@ let isCollapsed = false
 let dragTimer = null
 
 const MINI_SIZE = 64
-const dataPath = path.join(app.getPath('userData'), 'tasks.json')
+const APP_NAME  = '桌面清单'
+const dataPath  = path.join(app.getPath('userData'), 'tasks.json')
 
 const defaultData = {
   tasks: [],
@@ -31,15 +24,75 @@ const defaultData = {
   settings: {
     notifyDaysBefore: 1,
     position: null,
-    windowSize: { width: 340, height: 520 },
+    windowSize: { width: 400, height: 560 },  // 默认宽度加大
   },
+}
+
+// ── 用 Node.js 内置模块生成托盘图标（无外部依赖）──────────────
+function makeTrayIcon() {
+  // CRC32
+  const T = new Uint32Array(256)
+  for (let n = 0; n < 256; n++) {
+    let c = n
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1)
+    T[n] = c
+  }
+  function crc32(buf) {
+    let c = 0xffffffff
+    for (let i = 0; i < buf.length; i++) c = T[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+    return ((c ^ 0xffffffff) >>> 0)
+  }
+  function chunk(type, data) {
+    const tb = Buffer.from(type, 'ascii')
+    const lb = Buffer.allocUnsafe(4); lb.writeUInt32BE(data.length)
+    const cb = Buffer.allocUnsafe(4); cb.writeUInt32BE(crc32(Buffer.concat([tb, data])))
+    return Buffer.concat([lb, tb, data, cb])
+  }
+
+  const S = 32
+  const ihdr = Buffer.allocUnsafe(13)
+  ihdr.writeUInt32BE(S, 0); ihdr.writeUInt32BE(S, 4)
+  ihdr[8]=8; ihdr[9]=6; ihdr[10]=0; ihdr[11]=0; ihdr[12]=0  // RGBA
+
+  const raw = Buffer.allocUnsafe(S * (1 + S * 4))
+  for (let y = 0; y < S; y++) {
+    raw[y * (1 + S*4)] = 0
+    for (let x = 0; x < S; x++) {
+      const off = y*(1+S*4) + 1 + x*4
+      const dx = x - S/2 + 0.5, dy = y - S/2 + 0.5
+      const r  = Math.sqrt(dx*dx + dy*dy)
+      if (r < S/2 - 1) {
+        // 圆形背景：青色 #20b8a6
+        raw[off]=0x20; raw[off+1]=0xb8; raw[off+2]=0xa6; raw[off+3]=255
+        // 中间画简单勾形（✓）
+        const cx=x-S/2+0.5, cy=y-S/2+0.5
+        const inCheck = (
+          (cx>-9 && cx<-2 && cy>(cx+9)*0.7-2 && cy<(cx+9)*0.7+2) ||
+          (cx>-2 && cx<8  && cy>-(cx-8)*1.1-2 && cy<-(cx-8)*1.1+2)
+        )
+        if (inCheck) { raw[off]=255; raw[off+1]=255; raw[off+2]=255; raw[off+3]=255 }
+      } else if (r < S/2) {
+        // 边缘抗锯齿
+        const a = Math.round((S/2 - r) * 255)
+        raw[off]=0x20; raw[off+1]=0xb8; raw[off+2]=0xa6; raw[off+3]=a
+      } else {
+        raw[off]=0; raw[off+1]=0; raw[off+2]=0; raw[off+3]=0
+      }
+    }
+  }
+
+  const png = Buffer.concat([
+    Buffer.from([137,80,78,71,13,10,26,10]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
+  return nativeImage.createFromBuffer(png, { scaleFactor: 1 })
 }
 
 function loadData() {
   try {
-    if (fs.existsSync(dataPath)) {
-      return JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
-    }
+    if (fs.existsSync(dataPath)) return JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
   } catch (e) {}
   return JSON.parse(JSON.stringify(defaultData))
 }
@@ -49,45 +102,39 @@ function saveData(data) {
 }
 
 function checkDeadlines(data) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0,0,0,0)
   const n = data.settings.notifyDaysBefore ?? 1
 
   data.tasks.forEach((task) => {
     if (task.status === 'done' || !task.deadline) return
-    const deadline = new Date(task.deadline)
-    deadline.setHours(0, 0, 0, 0)
-    const diffDays = Math.round((deadline - today) / 86400000)
-    if (diffDays >= 0 && diffDays <= n) {
-      const label = diffDays === 0 ? '今天截止' : `还有 ${diffDays} 天截止`
+    const deadline = new Date(task.deadline); deadline.setHours(0,0,0,0)
+    const diff = Math.round((deadline - today) / 86400000)
+    if (diff >= 0 && diff <= n) {
+      const label = diff === 0 ? '今天截止' : `还有 ${diff} 天截止`
       new Notification({
-        title: `⏰ 任务提醒：${task.title}`,
-        body: label,
+        title: `${APP_NAME} · 任务提醒`,
+        body: `「${task.title}」${label}`,
+        silent: false,
       }).show()
     }
   })
 }
 
 async function createWindow() {
-  flog('createWindow start')
   const data = loadData()
   const { width, height } = data.settings.windowSize
   const display = screen.getPrimaryDisplay().workAreaSize
 
-  let x = data.settings.position?.x ?? display.width - width - 20
+  let x = data.settings.position?.x ?? display.width  - width  - 20
   let y = data.settings.position?.y ?? display.height - height - 20
-  flog(`initial size: ${width}x${height}, pos: ${x},${y}`)
 
   mainWindow = new BrowserWindow({
-    width,
-    height,
-    x,
-    y,
+    width, height, x, y,
     frame: false,
     transparent: true,
     hasShadow: false,
     alwaysOnTop: true,
-    resizable: true,    // false 会锁死 min/maxSize，导致 setSize 被 Windows 拒绝
+    resizable: true,
     maximizable: false,
     skipTaskbar: false,
     show: false,
@@ -95,42 +142,15 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,   // Electron 28 默认开 sandbox 导致 preload 无法加载
+      sandbox: false,
     },
   })
-  flog('BrowserWindow created')
 
-  // ready-to-show 必须在 loadURL 之前注册，否则可能错过事件
   mainWindow.once('ready-to-show', () => {
-    flog('ready-to-show fired, calling show()')
     mainWindow.show()
     checkDeadlines(data)
   })
 
-  if (isDev) {
-    flog('dev mode, polling Vite...')
-    let loaded = false
-    for (let i = 0; i < 30; i++) {
-      try {
-        await mainWindow.loadURL('http://localhost:5173')
-        flog(`loadURL succeeded on attempt ${i + 1}`)
-        loaded = true
-        break
-      } catch (e) {
-        flog(`loadURL attempt ${i + 1} failed: ${e.message}`)
-        await new Promise(r => setTimeout(r, 500))
-      }
-    }
-    if (!loaded) {
-      flog('ERROR: Could not connect to Vite')
-      app.quit()
-      return
-    }
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
-  }
-
-  // 禁止页面缩放
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.setZoomFactor(1.0)
     mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
@@ -138,92 +158,73 @@ async function createWindow() {
 
   mainWindow.on('moved', () => {
     const [wx, wy] = mainWindow.getPosition()
-    const d = loadData()
-    d.settings.position = { x: wx, y: wy }
-    saveData(d)
+    const d = loadData(); d.settings.position = { x: wx, y: wy }; saveData(d)
   })
 
-  // 失焦自动折叠（resize 过程中不触发）
   mainWindow.on('blur', () => {
-    if (!mainWindow || mainWindow.isDestroyed() || resizeState) return
+    if (!mainWindow || mainWindow.isDestroyed() || resizeState || dragTimer) return
     mainWindow.webContents.send('window-blur')
   })
 
-  // 防止 Windows Snap 把折叠窗口放大
   mainWindow.on('maximize', () => {
-    if (isCollapsed) {
-      mainWindow.unmaximize()
-      mainWindow.setSize(MINI_SIZE, MINI_SIZE)
-    }
+    if (isCollapsed) { mainWindow.unmaximize(); mainWindow.setSize(MINI_SIZE, MINI_SIZE) }
   })
-  mainWindow.on('will-resize', (e, newBounds) => {
-    if (isCollapsed && (newBounds.width > MINI_SIZE || newBounds.height > MINI_SIZE)) {
-      e.preventDefault()
-    }
+  mainWindow.on('will-resize', (e, nb) => {
+    if (isCollapsed && (nb.width > MINI_SIZE || nb.height > MINI_SIZE)) e.preventDefault()
   })
+
+  if (isDev) {
+    let loaded = false
+    for (let i = 0; i < 30; i++) {
+      try { await mainWindow.loadURL('http://localhost:5173'); loaded = true; break }
+      catch (e) { await new Promise(r => setTimeout(r, 500)) }
+    }
+    if (!loaded) { app.quit(); return }
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty()
+  const icon = makeTrayIcon()
   tray = new Tray(icon)
-  tray.setToolTip('桌面清单')
+  tray.setToolTip(APP_NAME)
 
   const menu = Menu.buildFromTemplate([
-    {
-      label: '显示/隐藏',
-      click: () => {
-        if (mainWindow.isVisible()) mainWindow.hide()
-        else mainWindow.show()
-      },
-    },
+    { label: '显示 / 隐藏', click: () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show() },
     { type: 'separator' },
     { label: '退出', click: () => app.quit() },
   ])
   tray.setContextMenu(menu)
-  tray.on('click', () => {
-    if (mainWindow.isVisible()) mainWindow.hide()
-    else mainWindow.show()
-  })
+  tray.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show())
 }
 
-// ── IPC 处理器 ──────────────────────────────────────
+// ── IPC ───────────────────────────────────────────────
 
 ipcMain.handle('tasks:load', () => loadData())
-
-ipcMain.handle('tasks:save', (_, data) => {
-  saveData(data)
-  return true
-})
+ipcMain.handle('tasks:save', (_, data) => { saveData(data); return true })
 
 ipcMain.handle('window:collapse', () => {
   if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
-  resizeState = null
-  isCollapsed = true
+  resizeState = null; isCollapsed = true
   collapsedPos = mainWindow.getPosition()
-  // 先锁住最大尺寸，防止 Windows Snap 放大
   mainWindow.setMaximumSize(MINI_SIZE, MINI_SIZE)
   mainWindow.setMinimumSize(1, 1)
   mainWindow.setSize(MINI_SIZE, MINI_SIZE)
-  flog(`collapse: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
 ipcMain.handle('window:expand', () => {
   isCollapsed = false
-  const data = loadData()
-  const { width, height } = data.settings.windowSize
-  // 先清除尺寸约束，再放大
+  const { width, height } = loadData().settings.windowSize
   mainWindow.setMaximumSize(0, 0)
   mainWindow.setMinimumSize(1, 1)
   mainWindow.setSize(width, height)
-  flog(`expand: after=${JSON.stringify(mainWindow.getBounds())}`)
 })
 
-// 拖拽：mousedown 立即启动，主进程轮询光标，stopDrag 返回是否移动过
 ipcMain.handle('window:startDrag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
   const initBounds = mainWindow.getBounds()
-  const initMouse = screen.getCursorScreenPoint()
-  // getCursorScreenPoint 和 getBounds 都是逻辑像素（DIP），无需换算
+  const initMouse  = screen.getCursorScreenPoint()
   let hasMoved = false
 
   dragTimer = setInterval(() => {
@@ -234,72 +235,50 @@ ipcMain.handle('window:startDrag', () => {
     hasMoved = true
     const w = isCollapsed ? MINI_SIZE : initBounds.width
     const h = isCollapsed ? MINI_SIZE : initBounds.height
-    mainWindow.setBounds({
-      x: Math.round(initBounds.x + dx),
-      y: Math.round(initBounds.y + dy),
-      width: w, height: h,
-    })
-  }, 8)  // 8ms ≈ 120fps，比 16ms 更流畅
-
-  // 把 hasMoved 的引用传回给 stopDrag
-  mainWindow._dragState = { get hasMoved() { return hasMoved } }
+    mainWindow.setBounds({ x: Math.round(initBounds.x+dx), y: Math.round(initBounds.y+dy), width: w, height: h })
+  }, 8)
+  mainWindow._drag = { get moved() { return hasMoved } }
 })
 
 ipcMain.handle('window:stopDrag', () => {
   if (dragTimer) { clearInterval(dragTimer); dragTimer = null }
-  const moved = mainWindow._dragState?.hasMoved ?? false
-  mainWindow._dragState = null
+  const moved = mainWindow._drag?.moved ?? false
+  mainWindow._drag = null
   return moved
 })
 
 ipcMain.handle('window:startResize', (_, dir) => {
   const initBounds = mainWindow.getBounds()
-  const initMouse = screen.getCursorScreenPoint()
+  const initMouse  = screen.getCursorScreenPoint()
   resizeState = { dir, initBounds, initMouse }
 
   resizeTimer = setInterval(() => {
     const mouse = screen.getCursorScreenPoint()
     const dx = mouse.x - initMouse.x
     const dy = mouse.y - initMouse.y
-
     let { x, y, width, height } = initBounds
-    const MIN_W = 280, MIN_H = 360
+    const MIN_W = 300, MIN_H = 400
 
     if (dir.includes('e')) width  = Math.max(MIN_W, Math.round(width  + dx))
     if (dir.includes('s')) height = Math.max(MIN_H, Math.round(height + dy))
-    if (dir.includes('w')) {
-      const newW = Math.max(MIN_W, Math.round(width - dx))
-      x += width - newW
-      width = newW
-    }
-    if (dir.includes('n')) {
-      const newH = Math.max(MIN_H, Math.round(height - dy))
-      y += height - newH
-      height = newH
-    }
-
+    if (dir.includes('w')) { const nw = Math.max(MIN_W, Math.round(width-dx));  x += width-nw;  width  = nw }
+    if (dir.includes('n')) { const nh = Math.max(MIN_H, Math.round(height-dy)); y += height-nh; height = nh }
     mainWindow.setBounds({ x, y, width, height })
   }, 16)
 })
 
 ipcMain.handle('window:stopResize', () => {
-  if (resizeTimer) {
-    clearInterval(resizeTimer)
-    resizeTimer = null
-  }
+  if (resizeTimer) { clearInterval(resizeTimer); resizeTimer = null }
   resizeState = null
   const b = mainWindow.getBounds()
-  const d = loadData()
-  d.settings.windowSize = { width: b.width, height: b.height }
-  saveData(d)
+  const d = loadData(); d.settings.windowSize = { width: b.width, height: b.height }; saveData(d)
   return { width: b.width, height: b.height }
 })
 
 app.whenReady().then(async () => {
+  app.setName(APP_NAME)
   await createWindow()
   createTray()
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
