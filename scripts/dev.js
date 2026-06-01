@@ -4,7 +4,7 @@ const path = require('path')
 const electronPath = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe')
 
 function startElectron(attempt = 1) {
-  console.log(`[dev] Starting Electron (attempt ${attempt}):`, electronPath)
+  console.log(`[dev] Starting Electron (attempt ${attempt})`)
 
   const child = spawn(electronPath, ['.'], {
     stdio: 'inherit',
@@ -16,10 +16,9 @@ function startElectron(attempt = 1) {
   })
 
   child.on('close', (code) => {
-    console.log('[dev] Electron exited with code', code)
-    // 3221225786 = STATUS_DLL_NOT_FOUND，Windows 首次加载 DLL 偶发失败，重试即可
-    if (code === 3221225786 && attempt < 3) {
-      console.log('[dev] Retrying in 1 second...')
+    // 任何非零退出码都重试（包括 3221225786 DLL 缺失 和 1 未捕获异常）
+    if (code !== 0 && code !== null && attempt < 3) {
+      console.log(`[dev] Electron exited with code ${code}, retrying in 1s...`)
       setTimeout(() => startElectron(attempt + 1), 1000)
     } else {
       process.exit(code ?? 0)
