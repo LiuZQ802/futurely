@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell, dialog, globalShortcut } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const fs = require('fs')
 const zlib = require('zlib')
@@ -17,6 +18,7 @@ let resizeTimer = null
 let resizeState = null
 let isCollapsed = false
 let dragTimer = null
+const notifiedSet = new Set()   // 本次会话已推送的提醒 key，重启后清空
 
 // ── 吸附 / 贴边隐藏 ──
 let snapEdge       = null   // 'left'|'right'|'top'|'bottom'|null
@@ -71,8 +73,7 @@ const defaultData = {
   assignees: ['自己'],
   tags: ['工作', '个人'],
   settings: {
-    notifyHoursBefore:   1,
-    notifyMinutesBefore: 0,
+    reminderOffsets: [60],
     lang:       'zh',
     theme:      'dark',
     autoLaunch: false,
@@ -330,7 +331,10 @@ function initDb() {
       archived INTEGER DEFAULT 0,
       createdAt TEXT,
       updatedAt TEXT,
-      syncVersion INTEGER DEFAULT 1
+      syncVersion INTEGER DEFAULT 1,
+      sortOrder INTEGER DEFAULT 0,
+      recurring INTEGER DEFAULT 0,
+      recurrence TEXT DEFAULT '{}'
     );
     CREATE INDEX IF NOT EXISTS idx_tasks_status   ON tasks(status);
     CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived);
@@ -361,13 +365,26 @@ function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_deleted_date ON deleted_tasks(deletedAt);
   `)
+
+  // 迁移：为旧数据库补列
+  try { db.prepare(`ALTER TABLE tasks ADD COLUMN sortOrder INTEGER DEFAULT 0`).run() } catch {}
+  try { db.prepare(`ALTER TABLE tasks ADD COLUMN recurring INTEGER DEFAULT 0`).run() } catch {}
+  try { db.prepare(`ALTER TABLE tasks ADD COLUMN recurrence TEXT DEFAULT '{}'`).run() } catch {}
+  // 若所有任务的 sortOrder 都为 0（默认值），按 createdAt 升序初始化
+  const nonZero = db.prepare(`SELECT COUNT(*) as c FROM tasks WHERE sortOrder != 0`).get()
+  if (nonZero.c === 0) {
+    const rows = db.prepare(`SELECT id FROM tasks ORDER BY createdAt ASC`).all()
+    const upd  = db.prepare(`UPDATE tasks SET sortOrder = ? WHERE id = ?`)
+    rows.forEach((r, i) => upd.run(i, r.id))
+  }
+
   return db
 }
 
 function loadFromDb() {
   const nowISO = new Date().toISOString()
 
-  const tasks = db.prepare(`SELECT * FROM tasks ORDER BY createdAt DESC`).all().map(r => ({
+  const tasks = db.prepare(`SELECT * FROM tasks ORDER BY sortOrder ASC`).all().map(r => ({
     id:        r.id,
     title:     r.title,
     deadline:  r.deadline,
@@ -381,6 +398,9 @@ function loadFromDb() {
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
     syncVersion: r.syncVersion,
+    sortOrder:   r.sortOrder ?? 0,
+    recurring:   r.recurring === 1,
+    recurrence:  JSON.parse(r.recurrence || '{}'),
   }))
 
   const assignees = db.prepare(`SELECT name FROM assignees`).all().map(r => r.name)
@@ -475,8 +495,8 @@ function saveData(data) {
   db.transaction(() => {
     const insTask = db.prepare(`
       INSERT OR REPLACE INTO tasks
-      (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, updatedAt, syncVersion)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, updatedAt, syncVersion, sortOrder, recurring, recurrence)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     for (const t of data.tasks ?? []) {
       insTask.run(
@@ -485,7 +505,10 @@ function saveData(data) {
         JSON.stringify(t.tags ?? []), t.workDir ?? '',
         t.archived ? 1 : 0,
         t.createdAt ?? nowISO, nowISO,
-        (t.syncVersion ?? 0) + 1
+        (t.syncVersion ?? 0) + 1,
+        t.sortOrder ?? 0,
+        t.recurring ? 1 : 0,
+        JSON.stringify(t.recurrence ?? {})
       )
     }
 
@@ -531,34 +554,53 @@ function saveData(data) {
   updateTrayTooltip()
 }
 
-function checkDeadlines(data) {
-  const now = new Date()
-  const h   = data.settings.notifyHoursBefore   ?? 1
-  const m   = data.settings.notifyMinutesBefore ?? 0
-  const notifyMs = (h * 60 + m) * 60000
+function checkDeadlines() {
+  try {
+    if (!db) return
+    const data = loadFromDb()
+    const now = new Date()
+    const offsets = data.settings.reminderOffsets
+    if (!Array.isArray(offsets) || offsets.length === 0) return
 
-  data.tasks.forEach((task) => {
-    if (task.status === 'done' || !task.deadline) return
-    const deadline = new Date(task.deadline)
-    const diffMs   = deadline - now
-    if (diffMs < 0 || diffMs > notifyMs) return
+    data.tasks.forEach((task) => {
+      if (task.status === 'done' || task.archived || !task.deadline) return
+      const deadline = new Date(task.deadline)
+      const diffMs = deadline - now
+      if (diffMs < 0) return
 
-    const diffMin = Math.round(diffMs / 60000)
-    const dh = Math.floor(diffMin / 60)
-    const dm = diffMin % 60
-    let label
-    if (dh > 0 && dm > 0)      label = `还有 ${dh} 小时 ${dm} 分钟截止`
-    else if (dh > 0)           label = `还有 ${dh} 小时截止`
-    else if (dm > 0)           label = `还有 ${dm} 分钟截止`
-    else                       label = `即将截止`
+      offsets.forEach((offsetMin) => {
+        const key = `${task.id}:${offsetMin}`
+        if (notifiedSet.has(key)) return
 
-    new Notification({
-      title:  `${APP_NAME} · 任务提醒`,
-      body:   `「${task.title}」${label}`,
-      icon:   appIcon,
-      silent: false,
-    }).show()
-  })
+        // offset = 0 表示到期时，检测窗口为 1 分钟内；其他 offset 检测是否已进入提前窗口
+        const withinWindow = offsetMin === 0
+          ? diffMs <= 60000
+          : diffMs <= offsetMin * 60000
+
+        if (!withinWindow) return
+        notifiedSet.add(key)
+
+        const diffMin = Math.round(diffMs / 60000)
+        const dh = Math.floor(diffMin / 60)
+        const dm = diffMin % 60
+        let label
+        if (diffMin <= 0)          label = `即将截止`
+        else if (dh > 0 && dm > 0) label = `还有 ${dh} 小时 ${dm} 分钟截止`
+        else if (dh > 0)           label = `还有 ${dh} 小时截止`
+        else if (dm > 0)           label = `还有 ${dm} 分钟截止`
+        else                       label = `即将截止`
+
+        new Notification({
+          title:  `${APP_NAME} · 任务提醒`,
+          body:   `「${task.title}」${label}`,
+          icon:   appIcon,
+          silent: false,
+        }).show()
+      })
+    })
+  } catch (e) {
+    console.error('[checkDeadlines]', e)
+  }
 }
 
 async function createWindow() {
@@ -595,7 +637,7 @@ async function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
-    checkDeadlines(data)
+    checkDeadlines()
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -954,29 +996,12 @@ app.whenReady().then(async () => {
     new Notification({ title: `${APP_NAME} · 每日摘要`, body, icon: appIcon, silent: false }).show()
   }, 60000)
 
+  // 每分钟周期检查截止日期提醒
+  setInterval(checkDeadlines, 60000)
+
   // 启动 5 秒后静默检测更新
-  setTimeout(async () => {
-    try {
-      const res  = await net.fetch('https://api.github.com/repos/LiuZQ802/futurely/releases/latest',
-        { headers: { 'User-Agent': 'Futurely-App' } })
-      const json = await res.json()
-      const latest  = (json.tag_name ?? '').replace(/^v/, '')
-      const current = app.getVersion()
-      if (latest.length > 0 && semverGt(latest, current) && mainWindow && !mainWindow.isDestroyed()) {
-        const exeAsset   = json.assets?.find(a => a.name.endsWith('.exe'))
-        const downloadUrl = exeAsset?.browser_download_url ?? json.html_url
-        const { response } = await dialog.showMessageBox(mainWindow, {
-          type:      'info',
-          icon:      appIcon,
-          buttons:   ['下载更新', '稍后'],
-          defaultId: 0,
-          title:     APP_NAME,
-          message:   `发现新版本 v${latest}`,
-          detail:    `当前版本：v${current}\n点击「下载更新」将直接下载安装包。`,
-        })
-        if (response === 0) shell.openExternal(downloadUrl)
-      }
-    } catch {}
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(() => {})
   }, 5000)
 })
 
@@ -1005,33 +1030,46 @@ ipcMain.handle('shell:openPath', (_, p) => {
   }
 })
 
-// 语义化版本比较：a > b 返回 true
-function semverGt(a, b) {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
-  for (let i = 0; i < 3; i++) {
-    const x = pa[i] ?? 0, y = pb[i] ?? 0
-    if (x > y) return true
-    if (x < y) return false
-  }
-  return false
-}
+// ── autoUpdater 配置 ──────────────────────────────────
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = true
 
-ipcMain.handle('app:checkUpdate', async () => {
-  try {
-    const res  = await net.fetch('https://api.github.com/repos/LiuZQ802/futurely/releases/latest',
-      { headers: { 'User-Agent': 'Futurely-App' } })
-    const data = await res.json()
-    const latest  = (data.tag_name ?? '').replace(/^v/, '')
-    const current = app.getVersion()
-    const hasUpdate  = latest.length > 0 && semverGt(latest, current)
-    const exeAsset   = data.assets?.find(a => a.name.endsWith('.exe'))
-    const downloadUrl = exeAsset?.browser_download_url ?? data.html_url
-    return { latest, current, url: downloadUrl, hasUpdate, body: data.body ?? '' }
-  } catch {
-    return { error: true }
+autoUpdater.on('update-available', info => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:available', {
+      version: info.version,
+      releaseNotes: info.releaseNotes ?? '',
+    })
   }
 })
+
+autoUpdater.on('update-not-available', () => {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('updater:not-available')
+})
+
+autoUpdater.on('update-downloaded', info => {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('updater:downloaded', { version: info.version })
+})
+
+autoUpdater.on('error', err => {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('updater:error', err.message)
+})
+
+ipcMain.handle('updater:check', () => {
+  if (!app.isPackaged) {
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('updater:not-available')
+    }, 800)
+    return
+  }
+  autoUpdater.checkForUpdates().catch(() => {})
+})
+ipcMain.handle('updater:download', () => autoUpdater.downloadUpdate().catch(() => {}))
+ipcMain.handle('updater:install',  () => autoUpdater.quitAndInstall())
 
 ipcMain.handle('app:openUrl', (_, url) => shell.openExternal(url))
 

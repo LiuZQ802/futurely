@@ -7,8 +7,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const assignees = ref(['自己'])
   const tags = ref(['工作', '个人'])
   const settings = ref({
-    notifyHoursBefore:   1,
-    notifyMinutesBefore: 0,
+    reminderOffsets: [60],
     lang:       'zh',
     theme:      'dark',
     autoLaunch: false,
@@ -47,6 +46,49 @@ export const useTaskStore = defineStore('tasks', () => {
     await api().saveData(plain)
   }
 
+  function calcNextDeadline(deadline, recurrence) {
+    const { type, weekday, dayOfMonth } = recurrence ?? {}
+    const hasTime = deadline?.includes('T')
+    let base
+    if (!deadline) {
+      base = new Date(); base.setHours(9, 0, 0, 0)
+    } else if (hasTime) {
+      base = new Date(deadline)
+    } else {
+      const [y, m, d] = deadline.split('-').map(Number)
+      base = new Date(y, m - 1, d)
+    }
+
+    if (type === 'daily') {
+      base.setDate(base.getDate() + 1)
+    } else if (type === 'weekdays') {
+      do { base.setDate(base.getDate() + 1) } while ([0, 6].includes(base.getDay()))
+    } else if (type === 'weekly' || type === 'biweekly') {
+      // 找下一个目标周几（weekly: 至少 +1 天；biweekly: 至少 +8 天跳过本周）
+      const target = weekday ?? base.getDay()
+      const minDays = type === 'biweekly' ? 8 : 1
+      base.setDate(base.getDate() + minDays)
+      while (base.getDay() !== target) base.setDate(base.getDate() + 1)
+    } else if (type === 'monthly') {
+      const target = dayOfMonth ?? base.getDate()
+      base.setDate(1)
+      base.setMonth(base.getMonth() + 1)
+      const maxDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate()
+      base.setDate(Math.min(target, maxDay))
+    }
+
+    const pad = n => String(n).padStart(2, '0')
+    if (hasTime) return `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`
+    return `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}`
+  }
+
+  function advanceRecurring(id) {
+    const task = tasks.value.find(t => t.id === id)
+    if (!task || !task.recurring || !task.recurrence?.type) return false
+    updateTask(id, { status: 'todo', deadline: calcNextDeadline(task.deadline, task.recurrence) })
+    return true
+  }
+
   function addTask(task) {
     tasks.value.push({
       id: uuidv4(),
@@ -57,6 +99,8 @@ export const useTaskStore = defineStore('tasks', () => {
       notes: '',
       status: 'todo',
       tags: [],
+      recurring: false,
+      recurrence: {},
       createdAt: new Date().toISOString(),
       ...task,
     })
@@ -79,7 +123,10 @@ export const useTaskStore = defineStore('tasks', () => {
   function cycleStatus(id) {
     const cycle = { todo: 'inprogress', inprogress: 'done', done: 'todo' }
     const task = tasks.value.find((t) => t.id === id)
-    if (task) updateTask(id, { status: cycle[task.status] })
+    if (!task) return
+    const next = cycle[task.status]
+    if (next === 'done' && advanceRecurring(id)) return
+    updateTask(id, { status: next })
   }
 
   function addAssignee(name) {
@@ -123,6 +170,14 @@ export const useTaskStore = defineStore('tasks', () => {
     persist()
   }
 
+  function reorderTasks(orderedIds) {
+    orderedIds.forEach((id, i) => {
+      const t = tasks.value.find(t => t.id === id)
+      if (t) t.sortOrder = i
+    })
+    persist()
+  }
+
   function updateSettings(patch) {
     settings.value = { ...settings.value, ...patch }
     persist()
@@ -148,5 +203,7 @@ export const useTaskStore = defineStore('tasks', () => {
     archiveTask,
     unarchiveTask,
     archiveDone,
+    reorderTasks,
+    advanceRecurring,
   }
 })

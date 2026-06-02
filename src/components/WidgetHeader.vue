@@ -113,5 +113,6 @@ function onDragStart(e) {
   transition: background 0.15s, color 0.15s;
   line-height: 1;
 }
-.btn:hover { background: var(--layer1-hover); color: var(--t1); }
+.btn:hover  { background: var(--layer1-hover); color: var(--t1); }
+.btn:active { transform: scale(0.82); transition-duration: 0.08s; }
 </style>

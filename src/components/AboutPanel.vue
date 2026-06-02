@@ -17,30 +17,25 @@
       <p class="desc">{{ t('aboutDesc') }}</p>
 
       <div class="actions">
-        <button class="btn-update" :disabled="updateState === 'checking'" @click="checkUpdate">
-          {{ updateLabel }}
+        <button
+          class="btn-update"
+          :class="{ spinning: updateState === 'checking' || updateState === 'downloading' }"
+          :disabled="updateState === 'checking' || updateState === 'downloading'"
+          @click="onUpdateClick"
+        >
+          <span v-if="updateState === 'checking' || updateState === 'downloading'" class="spin-icon">⟳</span>
+          {{ updateBtnLabel }}
         </button>
         <button class="btn-github" @click="openUrl('https://github.com/LiuZQ802/futurely')">
           GitHub ↗
         </button>
       </div>
 
-      <div v-if="updateInfo" class="update-banner" :class="updateInfo.hasUpdate ? 'new' : 'ok'">
-        <span>{{ updateInfo.hasUpdate && updateInfo.latest
-          ? `🎉 ${t('updateAvailable')} v${updateInfo.latest}`
-          : `✓ ${t('upToDate')}` }}</span>
-        <button v-if="updateInfo.hasUpdate && updateInfo.latest" class="btn-dl" @click="openUrl(updateInfo.url)">
-          {{ t('downloadUpdate') }} ↗
-        </button>
+      <!-- changelog -->
+      <div v-if="releaseNotes && (updateState === 'available' || updateState === 'downloading' || updateState === 'downloaded')" class="changelog">
+        <div class="changelog-title">{{ t('whatsNew') }} v{{ latestVersion }}</div>
+        <pre class="changelog-body">{{ releaseNotes }}</pre>
       </div>
-
-      <!-- 新版本 changelog -->
-      <div v-if="updateInfo?.hasUpdate && updateInfo.body" class="changelog">
-        <div class="changelog-title">{{ t('whatsNew') }}</div>
-        <pre class="changelog-body">{{ updateInfo.body }}</pre>
-      </div>
-
-      <div v-if="updateState === 'error'" class="update-banner ok">{{ t('updateError') }}</div>
 
       <!-- 统计 -->
       <div class="stats-wrap">
@@ -82,12 +77,22 @@ import { useI18n } from '../i18n.js'
 defineEmits(['close'])
 const { t } = useI18n()
 
-const version     = ref('')
-const updateState = ref('')
-const updateInfo  = ref(null)
-const updateLabel = computed(() =>
-  updateState.value === 'checking' ? t('checking') : t('checkUpdate')
-)
+const version       = ref('')
+const updateState   = ref('idle')   // idle | checking | up-to-date | available | downloading | downloaded | error
+const latestVersion = ref('')
+const releaseNotes  = ref('')
+
+const updateBtnLabel = computed(() => {
+  switch (updateState.value) {
+    case 'checking':    return t('checking')
+    case 'up-to-date':  return `✓ ${t('upToDate')}`
+    case 'available':   return `↓ ${t('downloadUpdate')}`
+    case 'downloading': return t('downloading')
+    case 'downloaded':  return `↻ ${t('restartInstall')}`
+    case 'error':       return t('checkUpdate')
+    default:            return t('checkUpdate')
+  }
+})
 
 const store = useTaskStore()
 
@@ -95,7 +100,6 @@ const stats = computed(() => {
   const tasks = store.tasks
   const now = new Date()
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0)
-
   const active = tasks.filter(t => t.status !== 'done' && !t.archived).length
   const doneThisWeek = tasks.filter(t => {
     if (t.status !== 'done') return false
@@ -123,15 +127,40 @@ const priorityDist = computed(() => {
 
 onMounted(async () => {
   version.value = await window.electronAPI?.getVersion() ?? ''
+
+  window.electronAPI?.onUpdateAvailable(info => {
+    latestVersion.value = info.version
+    releaseNotes.value  = info.releaseNotes ?? ''
+    updateState.value   = 'available'
+  })
+  window.electronAPI?.onUpdateNotAvailable(() => {
+    updateState.value = 'up-to-date'
+    setTimeout(() => { if (updateState.value === 'up-to-date') updateState.value = 'idle' }, 2000)
+  })
+  window.electronAPI?.onUpdateDownloaded(() => {
+    updateState.value = 'downloaded'
+  })
+  window.electronAPI?.onUpdateError(() => {
+    updateState.value = 'error'
+  })
 })
 
-async function checkUpdate() {
-  updateState.value = 'checking'
-  updateInfo.value  = null
-  const res = await window.electronAPI?.checkUpdate()
-  if (!res || res.error) { updateState.value = 'error'; return }
-  updateState.value = 'done'
-  updateInfo.value  = res
+function onUpdateClick() {
+  switch (updateState.value) {
+    case 'idle':
+    case 'up-to-date':
+    case 'error':
+      updateState.value = 'checking'
+      window.electronAPI?.checkForUpdates()
+      break
+    case 'available':
+      updateState.value = 'downloading'
+      window.electronAPI?.downloadUpdate()
+      break
+    case 'downloaded':
+      window.electronAPI?.installUpdate()
+      break
+  }
 }
 
 function openUrl(url) { window.electronAPI?.openUrl(url) }
@@ -221,7 +250,16 @@ function openUrl(url) { window.electronAPI?.openUrl(url) }
   border-color: var(--accent);
 }
 .btn-update:hover:not(:disabled) { background: var(--accent-hover); }
-.btn-update:disabled { opacity: 0.5; cursor: default; }
+.btn-update:disabled { opacity: 0.6; cursor: default; }
+
+.spin-icon {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+  margin-right: 4px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 .btn-github {
   background: var(--layer3);
@@ -230,28 +268,6 @@ function openUrl(url) { window.electronAPI?.openUrl(url) }
 }
 .btn-github:hover { color: var(--t1); border-color: var(--t3); }
 
-.update-banner {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 10px;
-  border-radius: 7px;
-  font-size: 11.5px;
-  gap: 8px;
-}
-.new { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
-.ok  { background: var(--layer3); color: var(--t3); border: 1px solid var(--layer3-border); }
-
-.btn-dl {
-  background: #10b981; color: #fff;
-  border: none; border-radius: 5px;
-  font-size: 11px; padding: 3px 9px;
-  cursor: pointer; white-space: nowrap;
-  font-family: inherit; font-weight: 600;
-  transition: background 0.15s;
-}
-.btn-dl:hover { background: #059669; }
 
 .changelog {
   width: 100%;

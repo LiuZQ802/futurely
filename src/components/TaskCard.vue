@@ -12,12 +12,15 @@
       @click.stop="store.cycleStatus(task.id)"
     >{{ statusIcon }}</button>
 
+    <div v-if="showHandle" class="drag-handle" @click.stop title="拖拽排序">⠿</div>
+
     <div class="body">
       <div class="top">
         <span class="title">{{ task.title }}</span>
         <span class="ptag" :class="`pt-${task.priority}`">{{ priorityLabel }}</span>
       </div>
       <div class="meta">
+        <span v-if="task.recurring" class="recur-badge" :title="recurrenceLabel">↻</span>
         <span v-if="task.deadline" class="dl" :class="dlClass">📅 {{ fmtDeadline(task.deadline) }}</span>
         <span v-if="task.assignee && task.assignee !== '自己'" class="who">👤 {{ task.assignee }}</span>
         <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
@@ -30,30 +33,29 @@
       </div>
       <div v-if="task.notes" class="notes-preview">{{ task.notes }}</div>
     </div>
-  </div>
 
-  <!-- 右键快捷菜单 -->
-  <Teleport to="body">
-    <template v-if="menu.visible">
-      <!-- 全屏透明遮罩：覆盖整个视口（包括 -webkit-app-region:drag 区域），点击即关 -->
-      <div class="menu-overlay" @mousedown="closeMenu" />
-      <!-- 菜单本体：z-index 在遮罩之上，点击不会穿透到遮罩 -->
-      <div
-        ref="menuEl"
-        class="ctx-menu"
-        :style="{ left: menu.x + 'px', top: menu.y + 'px' }"
-      >
-        <button class="ctx-item" @click="ctxToggleDone">
-          {{ task.status === 'done' ? t('ctxMarkTodo') : t('ctxMarkDone') }}
-        </button>
-        <button v-if="task.status === 'done'" class="ctx-item" @click="ctxArchive">
-          {{ task.archived ? t('unarchiveTask') : t('archiveTask') }}
-        </button>
-        <div class="ctx-divider" />
-        <button class="ctx-item danger" @click="ctxDelete">{{ t('ctxDelete') }}</button>
-      </div>
-    </template>
-  </Teleport>
+    <!-- 右键快捷菜单 -->
+    <Teleport to="body">
+      <div v-if="menu.visible" class="menu-overlay" @mousedown="closeMenu" />
+      <Transition name="ctx-menu">
+        <div
+          v-if="menu.visible"
+          ref="menuEl"
+          class="ctx-menu"
+          :style="{ left: menu.x + 'px', top: menu.y + 'px' }"
+        >
+          <button class="ctx-item" @click="ctxToggleDone">
+            {{ task.status === 'done' ? t('ctxMarkTodo') : t('ctxMarkDone') }}
+          </button>
+          <button v-if="task.status === 'done'" class="ctx-item" @click="ctxArchive">
+            {{ task.archived ? t('unarchiveTask') : t('archiveTask') }}
+          </button>
+          <div class="ctx-divider" />
+          <button class="ctx-item danger" @click="ctxDelete">{{ t('ctxDelete') }}</button>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
 </template>
 
 <script setup>
@@ -61,10 +63,13 @@ import { ref, computed } from 'vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
 
-const props = defineProps({ task: Object })
+const props = defineProps({ task: Object, showHandle: Boolean })
 defineEmits(['edit'])
 const store = useTaskStore()
 const { t, locale } = useI18n()
+
+const RECUR_LABEL = { daily: 'recurDaily', weekdays: 'recurWeekdays', weekly: 'recurWeekly', biweekly: 'recurBiweekly', monthly: 'recurMonthly' }
+const recurrenceLabel = computed(() => props.task.recurring ? t(RECUR_LABEL[props.task.recurrence?.type] ?? 'recurWeekly') : '')
 
 const PLABEL = { urgent: 'pUrgent', high: 'pHigh', medium: 'pMedium', low: 'pLow' }
 const SLABEL = { todo: 'sTodo', inprogress: 'sInProgress', done: 'sDone' }
@@ -134,9 +139,13 @@ function closeMenu() {
 }
 
 function ctxToggleDone() {
-  store.updateTask(props.task.id, {
-    status: props.task.status === 'done' ? 'todo' : 'done',
-  })
+  if (props.task.status !== 'done') {
+    if (!store.advanceRecurring(props.task.id)) {
+      store.updateTask(props.task.id, { status: 'done' })
+    }
+  } else {
+    store.updateTask(props.task.id, { status: 'todo' })
+  }
   closeMenu()
 }
 
@@ -168,11 +177,8 @@ function ctxDelete() {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-.card:hover {
-  background: var(--layer1-hover);
-  border-color: var(--t3);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
-}
+.card:hover  { background: var(--layer1-hover); border-color: var(--t3); box-shadow: 0 4px 14px rgba(0,0,0,0.10); }
+.card:active { transform: scale(0.985); transition-duration: 0.08s; }
 
 .p-urgent { border-left-color: var(--p-urgent); }
 .p-high   { border-left-color: var(--p-high); }
@@ -193,6 +199,21 @@ function ctxDelete() {
   background: rgba(32, 184, 166, 0.12);
 }
 
+.drag-handle {
+  color: var(--t3);
+  font-size: 14px;
+  cursor: grab;
+  padding: 0 2px;
+  margin-right: -2px;
+  line-height: 1;
+  align-self: center;
+  flex-shrink: 0;
+  transition: color 0.15s;
+  user-select: none;
+}
+.drag-handle:hover { color: var(--t1); }
+.drag-handle:active { cursor: grabbing; }
+
 .status-btn {
   width: 24px; height: 24px; min-width: 24px;
   border-radius: 50%;
@@ -205,7 +226,8 @@ function ctxDelete() {
   font-family: inherit;
   transition: transform 0.15s;
 }
-.status-btn:hover { transform: scale(1.25); }
+.status-btn:hover  { transform: scale(1.25); }
+.status-btn:active { transform: scale(0.88); transition-duration: 0.08s; }
 
 .s-todo       { color: var(--s-todo); }
 .s-inprogress { color: var(--s-doing); background: rgba(95,184,255,0.12); }
@@ -242,6 +264,7 @@ function ctxDelete() {
 
 .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
+.recur-badge { font-size: 11px; color: var(--accent-hover); font-weight: 700; }
 .dl         { font-size: 11px; color: var(--t2); }
 .dl.today   { color: var(--accent-hover); font-weight: 700; }
 .dl.warn    { color: var(--p-high);   font-weight: 600; }
@@ -256,17 +279,30 @@ function ctxDelete() {
 .dir-btn:hover { transform: scale(1.2); }
 
 .notes-preview {
-  display: none;
-  margin-top: 7px;
-  padding-top: 6px;
-  border-top: 1px solid var(--layer1-border);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 1px solid transparent;
   font-size: 11.5px;
   color: var(--t2);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  transition: max-height 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+              opacity 0.22s ease,
+              margin-top 0.22s ease,
+              padding-top 0.22s ease,
+              border-color 0.22s ease;
 }
-.card:hover .notes-preview { display: block; }
+.card:hover .notes-preview {
+  max-height: 120px;
+  opacity: 1;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top-color: var(--layer1-border);
+}
 
 .tag {
   font-size: 11px;
@@ -318,4 +354,10 @@ function ctxDelete() {
   background: var(--layer2-border);
   margin: 3px 8px;
 }
+
+/* 右键菜单弹出动画 */
+.ctx-menu-enter-active { transition: opacity 0.18s ease-out, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ctx-menu-leave-active { transition: opacity 0.12s ease-in,  transform 0.12s ease-in; }
+.ctx-menu-enter-from   { opacity: 0; transform: scale(0.88); transform-origin: top left; }
+.ctx-menu-leave-to     { opacity: 0; transform: scale(0.92); transform-origin: top left; }
 </style>

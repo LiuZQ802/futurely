@@ -28,28 +28,32 @@
     </template>
 
     <!-- 新建/编辑弹窗 -->
-    <TaskForm
-      v-if="showForm"
-      :task="editingTask"
-      @close="closeForm"
-    />
+    <Transition name="panel">
+      <TaskForm v-if="showForm" :task="editingTask" @close="closeForm" />
+    </Transition>
 
     <!-- 设置面板 -->
-    <SettingsPanel
-      v-if="showSettings"
-      @close="showSettings = false"
-      @open-recycle="showSettings = false; showRecycle = true"
-    />
+    <Transition name="panel">
+      <SettingsPanel
+        v-if="showSettings"
+        @close="showSettings = false"
+        @open-recycle="showSettings = false; showRecycle = true"
+      />
+    </Transition>
 
     <!-- 关于面板 -->
-    <AboutPanel v-if="showAbout" @close="showAbout = false" />
+    <Transition name="panel">
+      <AboutPanel v-if="showAbout" @close="showAbout = false" />
+    </Transition>
 
     <!-- 回收站 -->
-    <RecycleBinPanel
-      v-if="showRecycle"
-      @close="showRecycle = false"
-      @restored="onRestored"
-    />
+    <Transition name="panel">
+      <RecycleBinPanel
+        v-if="showRecycle"
+        @close="showRecycle = false"
+        @restored="onRestored"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -196,11 +200,18 @@ async function startResize(dir, e) {
   transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
   z-index: 10;
 }
-.fab:hover {
-  background: var(--accent-hover);
-  transform: scale(1.08);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.32);
+.fab:hover  { background: var(--accent-hover); transform: scale(1.08); box-shadow: 0 6px 18px rgba(0,0,0,0.32); }
+.fab:active { transform: scale(0.88); box-shadow: 0 2px 8px rgba(0,0,0,0.22); transition-duration: 0.08s; }
+
+/* ── 面板出入动画（B 风格：弹性滑入） ── */
+.panel-enter-active {
+  transition: opacity 0.28s ease-out, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+.panel-leave-active {
+  transition: opacity 0.18s ease-in, transform 0.18s ease-in;
+}
+.panel-enter-from { opacity: 0; transform: translateY(20px) scale(0.97); }
+.panel-leave-to   { opacity: 0; transform: translateY(8px)  scale(0.98); }
 
 /* ── 四周拖拽手柄 ── */
 .resize-handle {

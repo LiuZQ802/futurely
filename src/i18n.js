@@ -64,7 +64,7 @@ export const messages = {
     // 设置面板
     settingsTitle:          '设置',
     reminderSection:        '截止日期提醒',
-    remindBefore:           '提前提醒',
+    reminderNone:           '已关闭，不会推送截止日期提醒',
     hoursUnit:              '小时',
     minutesUnit:            '分钟',
     assigneesSection:       '预设联系人',
@@ -89,9 +89,19 @@ export const messages = {
     upToDate:               '已是最新版本',
     updateAvailable:        '发现新版本',
     updateError:            '检查失败，请稍后重试',
-    downloadUpdate:         '前往下载',
+    downloadUpdate:         '下载更新',
+    downloading:            '正在下载...',
+    restartInstall:         '重启安装',
     whatsNew:               '更新内容',
     version:                '版本',
+
+    // 重复任务
+    recurringLabel:  '重复任务',
+    recurDaily:      '每天',
+    recurWeekdays:   '工作日',
+    recurWeekly:     '每周',
+    recurBiweekly:   '每两周',
+    recurMonthly:    '每月',
 
     // 右键菜单
     ctxMarkDone: '标记完成',
@@ -180,7 +190,7 @@ export const messages = {
 
     settingsTitle:          'Settings',
     reminderSection:        'Deadline Reminder',
-    remindBefore:           'Remind Before',
+    reminderNone:           'Reminders off — no notifications will be sent',
     hoursUnit:              'hr',
     minutesUnit:            'min',
     assigneesSection:       'Preset Assignees',
@@ -205,9 +215,18 @@ export const messages = {
     upToDate:               'Already up to date',
     updateAvailable:        'New version available',
     updateError:            'Check failed, try again later',
-    downloadUpdate:         'Download',
+    downloadUpdate:         'Download Update',
+    downloading:            'Downloading...',
+    restartInstall:         'Restart & Install',
     whatsNew:               "What's New",
     version:                'Version',
+
+    recurringLabel:  'Recurring',
+    recurDaily:      'Daily',
+    recurWeekdays:   'Weekdays',
+    recurWeekly:     'Weekly',
+    recurBiweekly:   'Biweekly',
+    recurMonthly:    'Monthly',
 
     ctxMarkDone: 'Mark Done',
     ctxMarkTodo: 'Reset to Todo',

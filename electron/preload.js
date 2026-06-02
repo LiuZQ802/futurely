@@ -22,10 +22,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   unsnap:           ()    => ipcRenderer.invoke('window:unsnap'),
   toggleAutoHide:   ()    => ipcRenderer.invoke('window:toggleAutoHide'),
   // 应用
-  getVersion:       ()    => ipcRenderer.invoke('app:version'),
-  checkUpdate:      ()    => ipcRenderer.invoke('app:checkUpdate'),
-  openUrl:          (url) => ipcRenderer.invoke('app:openUrl', url),
-  setAutoLaunch:    (v)   => ipcRenderer.invoke('app:setAutoLaunch', v),
+  getVersion:          ()    => ipcRenderer.invoke('app:version'),
+  openUrl:             (url) => ipcRenderer.invoke('app:openUrl', url),
+  setAutoLaunch:       (v)   => ipcRenderer.invoke('app:setAutoLaunch', v),
+  // 自动更新
+  checkForUpdates:     ()    => ipcRenderer.invoke('updater:check'),
+  downloadUpdate:      ()    => ipcRenderer.invoke('updater:download'),
+  installUpdate:       ()    => ipcRenderer.invoke('updater:install'),
+  onUpdateAvailable:   (cb)  => ipcRenderer.on('updater:available',     (_, info) => cb(info)),
+  onUpdateNotAvailable:(cb)  => ipcRenderer.on('updater:not-available', () => cb()),
+  onUpdateDownloaded:  (cb)  => ipcRenderer.on('updater:downloaded',    (_, info) => cb(info)),
+  onUpdateError:       (cb)  => ipcRenderer.on('updater:error',         (_, msg)  => cb(msg)),
   // 目录
   selectFolder:     ()    => ipcRenderer.invoke('dialog:selectFolder'),
   openPath:         (p)   => ipcRenderer.invoke('shell:openPath', p),

@@ -1,6 +1,6 @@
 {
   "name": "futurely",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A floating desktop task list with edge-snap",
   "author": "Ziqi Liu",
   "main": "electron/main.js",
@@ -9,13 +9,16 @@
     "build": "vite build",
     "electron": "electron .",
     "gen-icon": "node scripts/gen-icon.js",
-    "pack": "node scripts/gen-icon.js && vite build && electron-builder"
+    "pack": "node scripts/gen-icon.js && vite build && electron-builder",
+    "release": "node scripts/gen-icon.js && vite build && electron-builder --publish always"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
+    "electron-updater": "^6.8.3",
     "pinia": "^2.1.7",
     "uuid": "^9.0.1",
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
@@ -32,6 +35,11 @@
     "productName": "Futurely",
     "directories": {
       "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "LiuZQ802",
+      "repo": "futurely"
     },
     "win": {
       "target": "nsis",

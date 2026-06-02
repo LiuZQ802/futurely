@@ -28,22 +28,35 @@
     </div>
 
     <!-- 列表 -->
-    <TransitionGroup name="task" tag="div" class="list">
-      <TaskCard
-        v-for="task in filtered"
-        :key="task.id"
-        :task="task"
-        @edit="$emit('edit-task', task)"
-      />
-      <div v-if="!filtered.length" key="empty" class="empty">
-        <span>{{ t('noTasks') }}</span>
-      </div>
-    </TransitionGroup>
+    <draggable
+      v-model="draggableList"
+      item-key="id"
+      handle=".drag-handle"
+      tag="div"
+      class="list"
+      :animation="200"
+      :disabled="!isDragMode"
+      ghost-class="drag-ghost"
+    >
+      <template #item="{ element }">
+        <TaskCard
+          :task="element"
+          :show-handle="isDragMode"
+          @edit="$emit('edit-task', element)"
+        />
+      </template>
+      <template #footer>
+        <div v-if="!filtered.length" class="empty">
+          <span>{{ t('noTasks') }}</span>
+        </div>
+      </template>
+    </draggable>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick } from 'vue'
+import draggable from 'vuedraggable'
 import TaskCard from './TaskCard.vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
@@ -77,6 +90,11 @@ function toggleSearch() {
 
 const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 }
 
+// 是否处于手动排序模式（全部视图 + 无搜索）
+const isDragMode = computed(() =>
+  activeFilter.value === 'all' && !(searching.value && searchQuery.value.trim())
+)
+
 const filtered = computed(() => {
   let list = [...store.tasks]
 
@@ -89,29 +107,37 @@ const filtered = computed(() => {
   } else if (activeFilter.value === 'archived') {
     list = list.filter(t => t.archived)
   } else {
-    // 非归档视图一律排除已归档
     list = list.filter(t => !t.archived)
     if (activeFilter.value !== 'all') {
-      list = list.filter((t) => t.status === activeFilter.value)
+      list = list.filter(t => t.status === activeFilter.value)
     }
     if (tagFilter.value) {
-      list = list.filter((t) => t.tags?.includes(tagFilter.value))
+      list = list.filter(t => t.tags?.includes(tagFilter.value))
     }
   }
 
+  if (isDragMode.value) {
+    // 手动排序模式：按 sortOrder
+    return list.slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  }
+
+  // 自动排序：优先级 → 截止日期
   return list.sort((a, b) => {
-    // 未完成在前
     if (a.status === 'done' && b.status !== 'done') return 1
     if (b.status === 'done' && a.status !== 'done') return -1
-    // 按优先级
     const pd = priorityOrder[a.priority] - priorityOrder[b.priority]
     if (pd !== 0) return pd
-    // 按截止日期
     if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
     if (a.deadline) return -1
     if (b.deadline) return 1
     return 0
   })
+})
+
+// vuedraggable 的双向绑定：拖拽结束时更新 sortOrder
+const draggableList = computed({
+  get: () => filtered.value,
+  set: (newList) => store.reorderTasks(newList.map(t => t.id)),
 })
 </script>
 
@@ -215,6 +241,13 @@ const filtered = computed(() => {
   color: var(--t2);
   font-size: 14px;
   padding: 40px 0;
+}
+
+/* ── 拖拽占位 ── */
+.drag-ghost {
+  opacity: 0.35;
+  background: var(--accent-dim) !important;
+  border-color: var(--accent) !important;
 }
 
 /* ── 任务卡片进入/离开动画 ── */

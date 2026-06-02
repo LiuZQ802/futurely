@@ -79,6 +79,52 @@
           </div>
         </div>
 
+        <!-- 重复任务 -->
+        <div class="field">
+          <div class="recur-row">
+            <label>{{ t('recurringLabel') }}</label>
+            <button
+              type="button"
+              class="toggle-btn"
+              :class="{ on: form.recurring }"
+              @click="form.recurring = !form.recurring"
+            ><span class="thumb" /></button>
+          </div>
+          <div v-if="form.recurring" class="recur-types">
+            <button
+              v-for="r in recurTypes"
+              :key="r.value"
+              type="button"
+              class="recur-chip"
+              :class="{ active: form.recurrence.type === r.value }"
+              @click="selectRecurType(r.value)"
+            >{{ t(r.key) }}</button>
+          </div>
+          <!-- 周几选择（每周 / 每两周） -->
+          <div v-if="form.recurring && (form.recurrence.type === 'weekly' || form.recurrence.type === 'biweekly')" class="recur-sub">
+            <span class="sub-label">{{ currentLang === 'zh' ? '每' : 'Every' }}</span>
+            <button
+              v-for="wd in weekdays"
+              :key="wd.val"
+              type="button"
+              class="recur-chip sm"
+              :class="{ active: form.recurrence.weekday === wd.val }"
+              @click="form.recurrence = { ...form.recurrence, weekday: wd.val }"
+            >{{ currentLang === 'zh' ? wd.zh : wd.en }}</button>
+          </div>
+          <!-- 每月第几天 -->
+          <div v-if="form.recurring && form.recurrence.type === 'monthly'" class="recur-sub">
+            <span class="sub-label">{{ currentLang === 'zh' ? '每月第' : 'On day' }}</span>
+            <input
+              type="number"
+              v-model.number="form.recurrence.dayOfMonth"
+              min="1" max="31"
+              class="day-inp"
+            />
+            <span class="sub-label">{{ currentLang === 'zh' ? '天' : '' }}</span>
+          </div>
+        </div>
+
         <div class="field">
           <label>{{ t('notesLabel') }}</label>
           <textarea v-model="form.notes" :placeholder="t('notesPlaceholder')" rows="3" />
@@ -107,18 +153,58 @@ const props = defineProps({ task: { type: Object, default: null } })
 const emit = defineEmits(['close'])
 
 const store = useTaskStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const isEdit = computed(() => !!props.task)
+const currentLang = computed(() => store.settings.lang ?? 'zh')
+
+const recurTypes = [
+  { value: 'daily',    key: 'recurDaily'    },
+  { value: 'weekdays', key: 'recurWeekdays' },
+  { value: 'weekly',   key: 'recurWeekly'   },
+  { value: 'biweekly', key: 'recurBiweekly' },
+  { value: 'monthly',  key: 'recurMonthly'  },
+]
+
+const weekdays = [
+  { val: 1, zh: '一', en: 'Mon' },
+  { val: 2, zh: '二', en: 'Tue' },
+  { val: 3, zh: '三', en: 'Wed' },
+  { val: 4, zh: '四', en: 'Thu' },
+  { val: 5, zh: '五', en: 'Fri' },
+  { val: 6, zh: '六', en: 'Sat' },
+  { val: 0, zh: '日', en: 'Sun' },
+]
+
+function deadlineDate() {
+  const dl = form.value?.deadline
+  if (!dl) return null
+  return dl.includes('T') ? new Date(dl) : (() => { const [y,m,d] = dl.split('-').map(Number); return new Date(y, m-1, d) })()
+}
+
+function selectRecurType(type) {
+  const r = { ...form.value.recurrence, type }
+  if ((type === 'weekly' || type === 'biweekly') && r.weekday == null) {
+    r.weekday = deadlineDate()?.getDay() ?? 1
+  }
+  if (type === 'monthly' && r.dayOfMonth == null) {
+    r.dayOfMonth = deadlineDate()?.getDate() ?? 1
+  }
+  form.value.recurrence = r
+}
 
 const form = ref({
-  title:    props.task?.title    ?? '',
-  priority: props.task?.priority ?? 'medium',
-  status:   props.task?.status   ?? 'todo',
-  deadline: props.task?.deadline ?? '',
-  assignee: props.task?.assignee ?? '自己',
-  tags:     [...(props.task?.tags ?? [])],
-  notes:    props.task?.notes    ?? '',
-  workDir:  props.task?.workDir  ?? '',
+  title:      props.task?.title      ?? '',
+  priority:   props.task?.priority   ?? 'medium',
+  status:     props.task?.status     ?? 'todo',
+  deadline:   props.task?.deadline   ?? '',
+  assignee:   props.task?.assignee   ?? '自己',
+  tags:       [...(props.task?.tags  ?? [])],
+  notes:      props.task?.notes      ?? '',
+  workDir:    props.task?.workDir    ?? '',
+  recurring:  props.task?.recurring  ?? false,
+  recurrence: props.task?.recurrence
+    ? { weekday: 1, dayOfMonth: 1, ...props.task.recurrence }
+    : { type: 'weekly', weekday: 1, dayOfMonth: 1 },
 })
 
 function basename(p) {
@@ -270,6 +356,62 @@ textarea { resize: none; }
   transition: color 0.15s;
 }
 .btn-clear-dir:hover { color: #f87171; }
+
+/* 重复任务 */
+.recur-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.toggle-btn {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: var(--layer3); border: 1px solid var(--layer3-border);
+  cursor: pointer; position: relative; transition: background 0.2s;
+  flex-shrink: 0; padding: 0;
+}
+.toggle-btn.on { background: var(--accent); border-color: var(--accent); }
+.thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--t3); transition: transform 0.2s, background 0.2s;
+  display: block;
+}
+.toggle-btn.on .thumb { transform: translateX(16px); background: #fff; }
+.recur-types {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+}
+.recur-chip {
+  background: var(--layer3); border: 1px solid var(--layer3-border);
+  color: var(--t2); font-size: 12px; font-family: inherit;
+  font-weight: 500; padding: 4px 11px; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.recur-chip:hover { color: var(--t1); border-color: var(--accent); }
+.recur-chip.active {
+  background: var(--accent); color: #061513;
+  border-color: var(--accent); font-weight: 600;
+}
+.theme-light .recur-chip.active { color: #fff; }
+.recur-chip.sm { padding: 4px 9px; }
+
+.recur-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.sub-label { font-size: 12px; color: var(--t3); flex-shrink: 0; }
+.day-inp {
+  width: 52px; flex-shrink: 0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 7px; color: var(--t1);
+  font-size: 13px; padding: 4px 8px;
+  outline: none; font-family: inherit; text-align: center;
+  -moz-appearance: textfield;
+}
+.day-inp::-webkit-outer-spin-button,
+.day-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.day-inp:focus { border-color: var(--accent); }
 
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-chip {

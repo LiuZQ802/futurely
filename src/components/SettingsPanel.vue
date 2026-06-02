@@ -78,27 +78,33 @@
         <!-- 提醒设置 -->
         <section>
           <h4>{{ t('reminderSection') }}</h4>
-          <div class="field row-inline">
-            <label>{{ t('remindBefore') }}</label>
-            <input
-              type="number"
-              v-model.number="notifyHours"
-              min="0"
-              max="999"
-              style="width: 58px"
-              @change="saveNotify"
-            />
-            <span class="unit">{{ t('hoursUnit') }}</span>
-            <input
-              type="number"
-              v-model.number="notifyMinutes"
-              min="0"
-              max="59"
-              style="width: 58px"
-              @change="saveNotify"
-            />
-            <span class="unit">{{ t('minutesUnit') }}</span>
+          <!-- 预设快捷 -->
+          <div class="reminder-chips">
+            <button
+              v-for="p in reminderPresets"
+              :key="p.offset"
+              class="reminder-chip"
+              :class="{ active: reminderOffsets.includes(p.offset) }"
+              @click="toggleOffset(p.offset)"
+            >{{ currentLang === 'zh' ? p.zh : p.en }}</button>
           </div>
+          <!-- 自定义时间点（已添加） -->
+          <div v-if="customOffsets.length" class="reminder-chips" style="margin-top: 7px">
+            <span v-for="off in customOffsets" :key="off" class="reminder-chip active custom-chip">
+              {{ fmtOffset(off) }}
+              <button class="chip-rm" @click="removeOffset(off)">×</button>
+            </span>
+          </div>
+          <!-- 自定义输入行 -->
+          <div class="custom-row">
+            <span class="custom-label">{{ currentLang === 'zh' ? '自定义' : 'Custom' }}</span>
+            <input type="number" v-model.number="customH" min="0" max="999" class="time-inp" @keyup.enter="addCustom" />
+            <span class="unit">{{ t('hoursUnit') }}</span>
+            <input type="number" v-model.number="customM" min="0" max="59" class="time-inp" @keyup.enter="addCustom" />
+            <span class="unit">{{ t('minutesUnit') }}</span>
+            <button class="add-custom-btn" @click="addCustom">+</button>
+          </div>
+          <p v-if="reminderOffsets.length === 0" class="reminder-none">{{ t('reminderNone') }}</p>
         </section>
 
         <!-- 联系人管理 -->
@@ -164,10 +170,57 @@ const store = useTaskStore()
 const { t } = useI18n()
 
 
-const notifyHours   = ref(store.settings.notifyHoursBefore   ?? 1)
-const notifyMinutes = ref(store.settings.notifyMinutesBefore ?? 0)
-const newAssignee   = ref('')
-const newTag        = ref('')
+const newAssignee = ref('')
+const newTag      = ref('')
+
+const PRESET_OFFSETS = [1440, 180, 60, 30, 0]
+
+const reminderPresets = [
+  { offset: 1440, zh: '1 天前',   en: '1 day before'   },
+  { offset: 180,  zh: '3 小时前', en: '3 hours before' },
+  { offset: 60,   zh: '1 小时前', en: '1 hour before'  },
+  { offset: 30,   zh: '30 分钟前',en: '30 min before'  },
+  { offset: 0,    zh: '到期时',   en: 'At due time'    },
+]
+
+const reminderOffsets = computed(() => store.settings.reminderOffsets ?? [60])
+const customOffsets   = computed(() => reminderOffsets.value.filter(o => !PRESET_OFFSETS.includes(o)))
+
+const customH = ref(1)
+const customM = ref(0)
+
+function toggleOffset(offset) {
+  const current = [...reminderOffsets.value]
+  const idx = current.indexOf(offset)
+  if (idx >= 0) current.splice(idx, 1)
+  else current.push(offset)
+  store.updateSettings({ reminderOffsets: current })
+}
+
+function addCustom() {
+  const total = (customH.value ?? 0) * 60 + (customM.value ?? 0)
+  if (total <= 0 || reminderOffsets.value.includes(total)) return
+  store.updateSettings({ reminderOffsets: [...reminderOffsets.value, total] })
+}
+
+function removeOffset(offset) {
+  store.updateSettings({ reminderOffsets: reminderOffsets.value.filter(o => o !== offset) })
+}
+
+function fmtOffset(totalMin) {
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  const lang = currentLang.value
+  if (lang === 'zh') {
+    if (h > 0 && m > 0) return `${h} 小时 ${m} 分钟前`
+    if (h > 0) return `${h} 小时前`
+    return `${m} 分钟前`
+  } else {
+    if (h > 0 && m > 0) return `${h}h ${m}m before`
+    if (h > 0) return `${h}h before`
+    return `${m}m before`
+  }
+}
 
 // 开机自启
 const autoLaunch = computed(() => !!store.settings.autoLaunch)
@@ -195,13 +248,6 @@ const themes = [
 
 function setLang(lang)   { store.updateSettings({ lang }) }
 function setTheme(theme) { store.updateSettings({ theme }) }
-
-function saveNotify() {
-  store.updateSettings({
-    notifyHoursBefore:   notifyHours.value,
-    notifyMinutesBefore: notifyMinutes.value,
-  })
-}
 
 function addAssignee() {
   store.addAssignee(newAssignee.value.trim())
@@ -394,6 +440,109 @@ section h4 {
 }
 .btn-add:hover { background: var(--accent-hover); }
 .theme-light .btn-add { color: #062030; }
+
+/* 提醒时间点 chips */
+.reminder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.reminder-chip {
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  color: var(--t2);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.reminder-chip:hover { color: var(--t1); border-color: var(--accent); }
+.reminder-chip.active {
+  background: var(--accent);
+  color: #061513;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.theme-light .reminder-chip.active { color: #fff; }
+
+.reminder-none {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--t3);
+}
+
+.custom-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: default;
+}
+.chip-rm {
+  background: transparent;
+  border: none;
+  color: rgba(6, 21, 19, 0.6);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+  margin-left: 1px;
+}
+.chip-rm:hover { color: #f87171; }
+
+/* 自定义提醒输入行 */
+.custom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: nowrap;
+}
+.custom-label {
+  font-size: 12px;
+  color: var(--t3);
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+.time-inp {
+  width: 46px;
+  flex-shrink: 0;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 7px;
+  color: var(--t1);
+  font-size: 13px;
+  padding: 5px 7px;
+  outline: none;
+  font-family: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.time-inp::-webkit-outer-spin-button,
+.time-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.time-inp:focus { border-color: var(--accent); }
+.add-custom-btn {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #061513;
+  border: none;
+  border-radius: 7px;
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1;
+  margin-left: auto;
+}
+.add-custom-btn:hover { background: var(--accent-hover); }
 
 /* 每日摘要 toggle 行里的子提示 */
 .hint {
