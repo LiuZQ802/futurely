@@ -588,7 +588,7 @@ app.whenReady().then(async () => {
       const json = await res.json()
       const latest  = (json.tag_name ?? '').replace(/^v/, '')
       const current = app.getVersion()
-      if (latest && semverGt(latest, current) && mainWindow && !mainWindow.isDestroyed()) {
+      if (latest.length > 0 && semverGt(latest, current) && mainWindow && !mainWindow.isDestroyed()) {
         const { response } = await dialog.showMessageBox(mainWindow, {
           type:      'info',
           icon:      appIcon,
@@ -646,7 +646,8 @@ ipcMain.handle('app:checkUpdate', async () => {
     const data = await res.json()
     const latest  = (data.tag_name ?? '').replace(/^v/, '')
     const current = app.getVersion()
-    return { latest, current, url: data.html_url, hasUpdate: semverGt(latest, current), body: data.body ?? '' }
+    const hasUpdate = latest.length > 0 && semverGt(latest, current)
+    return { latest, current, url: data.html_url, hasUpdate, body: data.body ?? '' }
   } catch {
     return { error: true }
   }

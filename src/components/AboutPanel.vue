@@ -26,8 +26,10 @@
       </div>
 
       <div v-if="updateInfo" class="update-banner" :class="updateInfo.hasUpdate ? 'new' : 'ok'">
-        <span>{{ updateInfo.hasUpdate ? `🎉 ${t('updateAvailable')} v${updateInfo.latest}` : `✓ ${t('upToDate')}` }}</span>
-        <button v-if="updateInfo.hasUpdate" class="btn-dl" @click="openUrl(updateInfo.url)">
+        <span>{{ updateInfo.hasUpdate && updateInfo.latest
+          ? `🎉 ${t('updateAvailable')} v${updateInfo.latest}`
+          : `✓ ${t('upToDate')}` }}</span>
+        <button v-if="updateInfo.hasUpdate && updateInfo.latest" class="btn-dl" @click="openUrl(updateInfo.url)">
           {{ t('downloadUpdate') }} ↗
         </button>
       </div>
