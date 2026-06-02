@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onWindowBlur:     (cb)  => ipcRenderer.on('window-blur', cb),
   onSnapChanged:    (cb)  => ipcRenderer.on('snap-changed', (_, v) => cb(v)),
   onOpenAddForm:    (cb)  => ipcRenderer.on('open-add-form', cb),
+  onHotkeyShow:     (cb)  => ipcRenderer.on('hotkey-show', cb),
   getSnapState:     ()    => ipcRenderer.invoke('window:getSnapState'),
   snapToNearest:    ()    => ipcRenderer.invoke('window:snapToNearest'),
   unsnap:           ()    => ipcRenderer.invoke('window:unsnap'),

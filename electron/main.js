@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, screen, nativeImage, net, shell, dialog, globalShortcut } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const zlib = require('zlib')
@@ -33,7 +33,38 @@ const HIDE_DELAY   = 600    // 离开后多少 ms 开始隐藏
 
 const MINI_SIZE = 64
 const APP_NAME  = 'Futurely'
-const dataPath  = path.join(app.getPath('userData'), 'tasks.json')
+let dataPath = ''
+let dbPath   = ''
+
+function resolveDataPaths() {
+  const userDataDir = app.getPath('userData')
+  // 打包后：exe 同级目录；开发模式：项目根目录
+  const portableDir = app.isPackaged
+    ? path.dirname(app.getPath('exe'))
+    : path.join(__dirname, '..')
+
+  function pick(filename) {
+    const portable = path.join(portableDir, filename)
+    const userData = path.join(userDataDir, filename)
+    if (fs.existsSync(portable)) return portable
+    if (fs.existsSync(userData)) return userData
+    // 开发模式直接回退 userData，避免在项目目录创建 db
+    if (!app.isPackaged) return userData
+    try {
+      const test = portable + '.writetest'
+      fs.writeFileSync(test, '')
+      fs.unlinkSync(test)
+      return portable
+    } catch {
+      return userData
+    }
+  }
+
+  dataPath = pick('tasks.json')
+  dbPath   = pick('futurely.db')
+  console.log('[Futurely] dataPath:', dataPath)
+  console.log('[Futurely] dbPath:  ', dbPath)
+}
 
 const defaultData = {
   tasks: [],
@@ -42,8 +73,14 @@ const defaultData = {
   settings: {
     notifyHoursBefore:   1,
     notifyMinutesBefore: 0,
-    position: null,
-    windowSize: { width: 400, height: 560 },
+    lang:       'zh',
+    theme:      'dark',
+    autoLaunch: false,
+    dailySummary: true,
+    workDirs:   [],
+    position:   null,
+    collapsed:  false,
+    windowSize: { width: 460, height: 600 },
   },
 }
 
@@ -260,15 +297,191 @@ function stopEdgeMonitor() {
   if (hideDelayTimer) { clearTimeout(hideDelayTimer); hideDelayTimer = null }
 }
 
+let db = null
+
+function initDb() {
+  if (db) return db
+  const Database = require('better-sqlite3')
+  db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      deadline TEXT,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'todo',
+      assignee TEXT DEFAULT '自己',
+      notes TEXT DEFAULT '',
+      tags TEXT DEFAULT '[]',
+      workDir TEXT,
+      archived INTEGER DEFAULT 0,
+      createdAt TEXT,
+      updatedAt TEXT,
+      syncVersion INTEGER DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_tasks_status   ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_archived ON tasks(archived);
+    CREATE INDEX IF NOT EXISTS idx_tasks_updated  ON tasks(updatedAt);
+
+    CREATE TABLE IF NOT EXISTS assignees (name TEXT PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS tags      (name TEXT PRIMARY KEY);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '',
+      updatedAt TEXT
+    );
+  `)
+  return db
+}
+
+function loadFromDb() {
+  const nowISO = new Date().toISOString()
+
+  const tasks = db.prepare(`SELECT * FROM tasks ORDER BY createdAt DESC`).all().map(r => ({
+    id:        r.id,
+    title:     r.title,
+    deadline:  r.deadline,
+    priority:  r.priority,
+    status:    r.status,
+    assignee:  r.assignee,
+    notes:     r.notes,
+    tags:      JSON.parse(r.tags || '[]'),
+    workDir:   r.workDir,
+    archived:  r.archived === 1,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    syncVersion: r.syncVersion,
+  }))
+
+  const assignees = db.prepare(`SELECT name FROM assignees`).all().map(r => r.name)
+  const tags      = db.prepare(`SELECT name FROM tags`).all().map(r => r.name)
+
+  const row = db.prepare(`SELECT value FROM settings WHERE key = 'app'`).get()
+  let settings = row ? JSON.parse(row.value) : {}
+
+  // 合并默认值，防止新增字段缺失
+  settings = { ...defaultData.settings, ...settings }
+
+  // 配置迁移：旧版窄窗口自动升级
+  const MIN_W = 460, MIN_H = 600
+  let changed = false
+  if (settings.windowSize?.width < MIN_W)  { settings.windowSize.width  = MIN_W;  changed = true }
+  if (settings.windowSize?.height < MIN_H) { settings.windowSize.height = MIN_H; changed = true }
+  if (changed) {
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)`)
+      .run('app', JSON.stringify(settings), nowISO)
+  }
+
+  return { tasks, assignees, tags, settings }
+}
+
+function migrateToDb(legacy) {
+  const nowISO = new Date().toISOString()
+
+  db.transaction(() => {
+    const insTask = db.prepare(`
+      INSERT OR REPLACE INTO tasks
+      (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, updatedAt, syncVersion)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const t of legacy.tasks ?? []) {
+      insTask.run(
+        t.id, t.title ?? '', t.deadline ?? '', t.priority ?? 'medium',
+        t.status ?? 'todo', t.assignee ?? '自己', t.notes ?? '',
+        JSON.stringify(t.tags ?? []), t.workDir ?? '',
+        t.archived ? 1 : 0,
+        t.createdAt ?? nowISO, nowISO, 1
+      )
+    }
+
+    db.prepare(`DELETE FROM assignees`).run()
+    const insA = db.prepare(`INSERT INTO assignees (name) VALUES (?)`)
+    for (const n of legacy.assignees ?? ['自己']) insA.run(n)
+
+    db.prepare(`DELETE FROM tags`).run()
+    const insT = db.prepare(`INSERT INTO tags (name) VALUES (?)`)
+    for (const n of legacy.tags ?? ['工作', '个人']) insT.run(n)
+
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)`)
+      .run('app', JSON.stringify({ ...defaultData.settings, ...(legacy.settings ?? {}) }), nowISO)
+  })()
+}
+
 function loadData() {
-  try {
-    if (fs.existsSync(dataPath)) return JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
-  } catch (e) {}
-  return JSON.parse(JSON.stringify(defaultData))
+  // 只要旧 JSON 存在且有任务数据，就尝试迁移（防止 db 被提前创建为空文件）
+  if (fs.existsSync(dataPath)) {
+    try {
+      const legacy = JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
+      const hasLegacyTasks = (legacy.tasks?.length ?? 0) > 0
+      if (hasLegacyTasks) {
+        let shouldMigrate = !fs.existsSync(dbPath)
+        if (!shouldMigrate) {
+          initDb()
+          const count = db.prepare(`SELECT COUNT(*) as c FROM tasks`).get().c
+          shouldMigrate = count === 0
+        }
+        if (shouldMigrate) {
+          initDb()
+          migrateToDb(legacy)
+          fs.renameSync(dataPath, dataPath + '.backup')
+          return legacy
+        }
+      }
+    } catch (e) { console.error('Migration failed', e) }
+  }
+
+  if (!fs.existsSync(dbPath)) {
+    return JSON.parse(JSON.stringify(defaultData))
+  }
+
+  initDb()
+  return loadFromDb()
 }
 
 function saveData(data) {
-  fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8')
+  if (!db) initDb()
+  const nowISO = new Date().toISOString()
+
+  db.transaction(() => {
+    const insTask = db.prepare(`
+      INSERT OR REPLACE INTO tasks
+      (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, updatedAt, syncVersion)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const t of data.tasks ?? []) {
+      insTask.run(
+        t.id, t.title ?? '', t.deadline ?? '', t.priority ?? 'medium',
+        t.status ?? 'todo', t.assignee ?? '自己', t.notes ?? '',
+        JSON.stringify(t.tags ?? []), t.workDir ?? '',
+        t.archived ? 1 : 0,
+        t.createdAt ?? nowISO, nowISO,
+        (t.syncVersion ?? 0) + 1
+      )
+    }
+
+    // 删除已从列表移除的任务
+    const ids = (data.tasks ?? []).map(t => t.id)
+    if (ids.length) {
+      const ph = ids.map(() => '?').join(',')
+      db.prepare(`DELETE FROM tasks WHERE id NOT IN (${ph})`).run(...ids)
+    } else {
+      db.prepare(`DELETE FROM tasks`).run()
+    }
+
+    db.prepare(`DELETE FROM assignees`).run()
+    const insA = db.prepare(`INSERT INTO assignees (name) VALUES (?)`)
+    for (const n of data.assignees ?? ['自己']) insA.run(n)
+
+    db.prepare(`DELETE FROM tags`).run()
+    const insT = db.prepare(`INSERT INTO tags (name) VALUES (?)`)
+    for (const n of data.tags ?? ['工作', '个人']) insT.run(n)
+
+    db.prepare(`INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)`)
+      .run('app', JSON.stringify(data.settings ?? {}), nowISO)
+  })()
 }
 
 function checkDeadlines(data) {
@@ -448,7 +661,12 @@ ipcMain.handle('window:expand', () => {
   const { width, height } = loadData().settings.windowSize
   mainWindow.setMaximumSize(0, 0)
   mainWindow.setMinimumSize(1, 1)
-  mainWindow.setSize(width, height)
+  // 自适应展开方向：将当前位置向屏幕内侧收拢，避免窗口展开后超出工作区
+  const wa = workArea()
+  const [cx, cy] = mainWindow.getPosition()
+  const nx = Math.max(wa.x, Math.min(cx, wa.x + wa.width  - width))
+  const ny = Math.max(wa.y, Math.min(cy, wa.y + wa.height - height))
+  mainWindow.setBounds({ x: nx, y: ny, width, height })
 })
 
 ipcMain.handle('window:startDrag', () => {
@@ -570,6 +788,7 @@ ipcMain.handle('window:stopResize', () => {
 
 app.whenReady().then(async () => {
   app.setName(APP_NAME)
+  resolveDataPaths()        // 初始化 dataPath / dbPath
   appIcon = makeAppIcon()   // 生成一次，全局复用
   await createWindow()
   createTray()
@@ -580,6 +799,45 @@ app.whenReady().then(async () => {
     app.setLoginItemSettings({ openAtLogin: !!data.settings.autoLaunch })
   }
 
+  // 全局热键：Ctrl+Shift+F 召唤 / 隐藏窗口
+  globalShortcut.register('Ctrl+Shift+F', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isVisible() && mainWindow.isFocused()) {
+      mainWindow.hide()
+      return
+    }
+    // 召唤时若处于折叠态，先通知前端展开再显示
+    if (isCollapsed) {
+      mainWindow.webContents.send('hotkey-show')
+    }
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  // 每日摘要：每分钟检查是否到 9:00
+  let lastSummaryDate = null
+  setInterval(() => {
+    const now = new Date()
+    if (now.getHours() !== 9 || now.getMinutes() !== 0) return
+    const today = now.toDateString()
+    if (lastSummaryDate === today) return
+    lastSummaryDate = today
+
+    const d = loadData()
+    if (d.settings.dailySummary === false) return
+
+    const todayPrefix = now.toISOString().slice(0, 10)
+    const active      = d.tasks.filter(t => t.status !== 'done')
+    const dueToday    = active.filter(t => t.deadline?.startsWith(todayPrefix))
+
+    if (active.length === 0) return
+    const body = dueToday.length > 0
+      ? `今日到期 ${dueToday.length} 个任务，共 ${active.length} 个待处理`
+      : `共有 ${active.length} 个任务待处理`
+
+    new Notification({ title: `${APP_NAME} · 每日摘要`, body, icon: appIcon, silent: false }).show()
+  }, 60000)
+
   // 启动 5 秒后静默检测更新
   setTimeout(async () => {
     try {
@@ -589,6 +847,8 @@ app.whenReady().then(async () => {
       const latest  = (json.tag_name ?? '').replace(/^v/, '')
       const current = app.getVersion()
       if (latest.length > 0 && semverGt(latest, current) && mainWindow && !mainWindow.isDestroyed()) {
+        const exeAsset   = json.assets?.find(a => a.name.endsWith('.exe'))
+        const downloadUrl = exeAsset?.browser_download_url ?? json.html_url
         const { response } = await dialog.showMessageBox(mainWindow, {
           type:      'info',
           icon:      appIcon,
@@ -596,13 +856,15 @@ app.whenReady().then(async () => {
           defaultId: 0,
           title:     APP_NAME,
           message:   `发现新版本 v${latest}`,
-          detail:    `当前版本：v${current}\n点击「下载更新」前往下载页面。`,
+          detail:    `当前版本：v${current}\n点击「下载更新」将直接下载安装包。`,
         })
-        if (response === 0) shell.openExternal(json.html_url)
+        if (response === 0) shell.openExternal(downloadUrl)
       }
     } catch {}
   }, 5000)
 })
+
+app.on('will-quit', () => globalShortcut.unregisterAll())
 
 ipcMain.handle('app:version', () => app.getVersion())
 
@@ -646,8 +908,10 @@ ipcMain.handle('app:checkUpdate', async () => {
     const data = await res.json()
     const latest  = (data.tag_name ?? '').replace(/^v/, '')
     const current = app.getVersion()
-    const hasUpdate = latest.length > 0 && semverGt(latest, current)
-    return { latest, current, url: data.html_url, hasUpdate, body: data.body ?? '' }
+    const hasUpdate  = latest.length > 0 && semverGt(latest, current)
+    const exeAsset   = data.assets?.find(a => a.name.endsWith('.exe'))
+    const downloadUrl = exeAsset?.browser_download_url ?? data.html_url
+    return { latest, current, url: downloadUrl, hasUpdate, body: data.body ?? '' }
   } catch {
     return { error: true }
   }

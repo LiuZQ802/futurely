@@ -1,5 +1,5 @@
 <template>
-  <div class="header">
+  <div class="header" @mousedown="onDragStart">
     <div class="left">
       <span class="title">Futurely</span>
       <span v-if="activeCount > 0" class="count">{{ activeCount }}</span>
@@ -37,6 +37,19 @@ onMounted(async () => {
   if (state) snapEdge.value = state.edge
   window.electronAPI?.onSnapChanged(({ edge }) => { snapEdge.value = edge })
 })
+
+function onDragStart(e) {
+  if (e.button !== 0) return
+  // 点击按钮时不触发拖拽（让按钮 click 正常执行）
+  if (e.target.closest('button')) return
+  window.electronAPI?.startDrag()
+
+  const onUp = async () => {
+    window.removeEventListener('mouseup', onUp)
+    await window.electronAPI?.stopDrag()
+  }
+  window.addEventListener('mouseup', onUp)
+}
 </script>
 
 <style scoped>
@@ -45,18 +58,15 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 11px 12px 10px;
-  cursor: grab;
   border-bottom: 1px solid var(--layer1-border);
   background: var(--layer2-header);
   flex-shrink: 0;
-  -webkit-app-region: drag;
 }
 
 .left {
   display: flex;
   align-items: center;
   gap: 8px;
-  -webkit-app-region: no-drag;
 }
 
 .title {
@@ -87,7 +97,6 @@ onMounted(async () => {
 .actions {
   display: flex;
   gap: 2px;
-  -webkit-app-region: no-drag;
 }
 
 .btn {
@@ -103,7 +112,6 @@ onMounted(async () => {
   justify-content: center;
   transition: background 0.15s, color 0.15s;
   line-height: 1;
-  -webkit-app-region: no-drag;
 }
 .btn:hover { background: var(--layer1-hover); color: var(--t1); }
 </style>

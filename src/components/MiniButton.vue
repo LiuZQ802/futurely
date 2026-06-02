@@ -33,19 +33,16 @@ function onMouseDown(e) {
   height: 100vh;
   border-radius: 14px;
   background: var(--layer0);
-  border: 1px solid var(--layer1-border);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
   position: relative;
-  box-shadow: var(--shadow);
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
 }
 
 .mini:hover {
   background: var(--layer1-hover);
-  border-color: #738092;
 }
 .mini:active { cursor: grabbing; }
 

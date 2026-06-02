@@ -9,6 +9,7 @@ export const messages = {
     filterTodo:      '待办',
     filterInProgress:'进行中',
     filterDone:      '已完成',
+    filterArchived:  '已归档',
     allTags:         '所有标签',
 
     // 优先级
@@ -91,6 +92,24 @@ export const messages = {
     downloadUpdate:         '前往下载',
     whatsNew:               '更新内容',
     version:                '版本',
+
+    // 右键菜单
+    ctxMarkDone: '标记完成',
+    ctxMarkTodo: '重置待办',
+    ctxDelete:   '删除任务',
+
+    // 归档
+    archiveDone: '归档已完成',
+    archiveTask: '归档此任务',
+    unarchiveTask: '取消归档',
+
+    // 设置 — 全局热键
+    globalHotkeySection: '全局热键',
+    hotkeyHint:          '召唤 / 隐藏窗口',
+
+    // 设置 — 每日摘要
+    dailySummarySection: '每日摘要通知',
+    dailySummaryHint:    '每天早上 9 点推送今日任务摘要',
   },
 
   en: {
@@ -99,6 +118,7 @@ export const messages = {
     filterTodo:      'Todo',
     filterInProgress:'In Progress',
     filterDone:      'Done',
+    filterArchived:  'Archived',
     allTags:         'All Tags',
 
     pUrgent: 'Urgent', pHigh: 'High', pMedium: 'Med', pLow: 'Low',
@@ -173,6 +193,20 @@ export const messages = {
     downloadUpdate:         'Download',
     whatsNew:               "What's New",
     version:                'Version',
+
+    ctxMarkDone: 'Mark Done',
+    ctxMarkTodo: 'Reset to Todo',
+    ctxDelete:   'Delete Task',
+
+    archiveDone: 'Archive Done',
+    archiveTask: 'Archive Task',
+    unarchiveTask: 'Unarchive',
+
+    globalHotkeySection: 'Global Hotkey',
+    hotkeyHint:          'Show / Hide window',
+
+    dailySummarySection: 'Daily Summary',
+    dailySummaryHint:    'Push a morning summary at 9 AM',
   },
 }
 

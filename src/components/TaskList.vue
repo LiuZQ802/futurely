@@ -52,14 +52,17 @@ import { useI18n } from '../i18n.js'
 
 defineEmits(['edit-task'])
 
+
 const store = useTaskStore()
 const { t } = useI18n()
+
 
 const statusFilters = computed(() => [
   { label: t('filterAll'),        value: 'all' },
   { label: t('filterTodo'),       value: 'todo' },
   { label: t('filterInProgress'), value: 'inprogress' },
   { label: t('filterDone'),       value: 'done' },
+  { label: t('filterArchived'),   value: 'archived' },
 ])
 
 const activeFilter = ref('all')
@@ -85,7 +88,11 @@ const filtered = computed(() => {
       t.title?.toLowerCase().includes(q) ||
       t.notes?.toLowerCase().includes(q)
     )
+  } else if (activeFilter.value === 'archived') {
+    list = list.filter(t => t.archived)
   } else {
+    // 非归档视图一律排除已归档
+    list = list.filter(t => !t.archived)
     if (activeFilter.value !== 'all') {
       list = list.filter((t) => t.status === activeFilter.value)
     }
@@ -164,6 +171,7 @@ const filtered = computed(() => {
 }
 .search-input::placeholder { color: var(--t3); }
 
+
 .search-btn {
   background: transparent;
   border: none;
@@ -195,7 +203,7 @@ const filtered = computed(() => {
 .list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 10px 10px;
+  padding: 8px 10px 72px;
   display: flex;
   flex-direction: column;
   gap: 8px;

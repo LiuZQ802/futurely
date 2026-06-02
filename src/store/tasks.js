@@ -12,14 +12,15 @@ export const useTaskStore = defineStore('tasks', () => {
     lang:       'zh',
     theme:      'dark',
     autoLaunch: false,
-    workDirs:   [],   // string[]，每项为目录绝对路径
+    dailySummary: true,
+    workDirs:   [],
     position:   null,
     collapsed:  false,
-    windowSize: { width: 340, height: 520 },
+    windowSize: { width: 520, height: 600 },
   })
 
   const activeTasks = computed(() =>
-    tasks.value.filter((t) => t.status !== 'done')
+    tasks.value.filter((t) => t.status !== 'done' && !t.archived)
   )
 
   // 每次调用时动态获取，避免初始化时快照为 undefined
@@ -105,6 +106,23 @@ export const useTaskStore = defineStore('tasks', () => {
     persist()
   }
 
+  function archiveTask(id) {
+    const idx = tasks.value.findIndex((t) => t.id === id)
+    if (idx !== -1) { tasks.value[idx] = { ...tasks.value[idx], archived: true }; persist() }
+  }
+
+  function unarchiveTask(id) {
+    const idx = tasks.value.findIndex((t) => t.id === id)
+    if (idx !== -1) { tasks.value[idx] = { ...tasks.value[idx], archived: false }; persist() }
+  }
+
+  function archiveDone() {
+    tasks.value = tasks.value.map((t) =>
+      t.status === 'done' ? { ...t, archived: true } : t
+    )
+    persist()
+  }
+
   function updateSettings(patch) {
     settings.value = { ...settings.value, ...patch }
     persist()
@@ -127,5 +145,8 @@ export const useTaskStore = defineStore('tasks', () => {
     addTag,
     removeTag,
     updateSettings,
+    archiveTask,
+    unarchiveTask,
+    archiveDone,
   }
 })

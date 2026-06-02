@@ -21,6 +21,32 @@
           </div>
         </section>
 
+        <!-- 每日摘要 -->
+        <section>
+          <div class="toggle-row">
+            <div>
+              <span class="toggle-label">{{ t('dailySummarySection') }}</span>
+              <span class="hint">{{ t('dailySummaryHint') }}</span>
+            </div>
+            <button
+              class="toggle-btn"
+              :class="{ on: dailySummary }"
+              @click="toggleDailySummary"
+            >
+              <span class="thumb" />
+            </button>
+          </div>
+        </section>
+
+        <!-- 全局热键 -->
+        <section>
+          <h4>{{ t('globalHotkeySection') }}</h4>
+          <div class="hotkey-row">
+            <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>F</kbd>
+            <span class="hotkey-desc">{{ t('hotkeyHint') }}</span>
+          </div>
+        </section>
+
         <!-- 语言 -->
         <section>
           <h4>{{ t('langSection') }}</h4>
@@ -141,6 +167,12 @@ function toggleAutoLaunch() {
   const next = !autoLaunch.value
   store.updateSettings({ autoLaunch: next })
   window.electronAPI?.setAutoLaunch(next)
+}
+
+// 每日摘要
+const dailySummary = computed(() => store.settings.dailySummary !== false)
+function toggleDailySummary() {
+  store.updateSettings({ dailySummary: !dailySummary.value })
 }
 
 const currentLang  = computed(() => store.settings.lang  ?? 'zh')
@@ -355,4 +387,33 @@ section h4 {
 .btn-add:hover { background: var(--accent-hover); }
 .theme-light .btn-add { color: #062030; }
 
+/* 每日摘要 toggle 行里的子提示 */
+.hint {
+  display: block;
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+
+/* 热键展示行 */
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--t3);
+  font-size: 12px;
+}
+kbd {
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--t1);
+}
+.hotkey-desc {
+  margin-left: 6px;
+  color: var(--t2);
+}
 </style>

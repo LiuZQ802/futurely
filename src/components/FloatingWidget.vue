@@ -22,6 +22,7 @@
         />
         <div class="body">
           <TaskList @edit-task="openEdit" />
+          <button class="fab" @click="showForm = true">＋</button>
         </div>
       </div>
     </template>
@@ -94,6 +95,14 @@ onMounted(() => {
     }
     showForm.value = true
   })
+
+  // 热键召唤：自动从折叠态展开
+  window.electronAPI?.onHotkeyShow(async () => {
+    if (collapsed.value) {
+      collapsed.value = false
+      await window.electronAPI?.expandWindow()
+    }
+  })
 })
 
 // ── 四周拖拽调整大小（使用 movementX/Y，无坐标系差异）─────────────
@@ -141,6 +150,33 @@ async function startResize(dir, e) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.fab {
+  position: absolute;
+  bottom: 16px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  z-index: 10;
+}
+.fab:hover {
+  background: var(--accent-hover);
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.32);
 }
 
 /* ── 四周拖拽手柄 ── */
