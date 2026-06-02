@@ -86,6 +86,17 @@ const defaultData = {
 
 // ── 生成应用图标（深海军蓝圆角方块 + 金色右向三角，代表「面向未来」）──
 function makeAppIcon() {
+  const candidates = [
+    path.join(__dirname, '..', 'public', 'icon.png'),
+    path.join(__dirname, '..', 'dist', 'icon.png'),
+  ]
+
+  for (const iconPath of candidates) {
+    if (!fs.existsSync(iconPath)) continue
+    const icon = nativeImage.createFromPath(iconPath)
+    if (!icon.isEmpty()) return icon
+  }
+
   const T = new Uint32Array(256)
   for (let n = 0; n < 256; n++) {
     let c = n
@@ -333,6 +344,22 @@ function initDb() {
       value TEXT NOT NULL DEFAULT '',
       updatedAt TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS deleted_tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      deadline TEXT,
+      priority TEXT DEFAULT 'medium',
+      status TEXT DEFAULT 'todo',
+      assignee TEXT DEFAULT '自己',
+      notes TEXT DEFAULT '',
+      tags TEXT DEFAULT '[]',
+      workDir TEXT,
+      archived INTEGER DEFAULT 0,
+      createdAt TEXT,
+      deletedAt TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_deleted_date ON deleted_tasks(deletedAt);
   `)
   return db
 }
@@ -462,8 +489,27 @@ function saveData(data) {
       )
     }
 
-    // 删除已从列表移除的任务
+    // 软删除：不在列表中的任务先移入回收站，再从 tasks 表删除
     const ids = (data.tasks ?? []).map(t => t.id)
+    let toDelete = []
+    if (ids.length) {
+      const ph = ids.map(() => '?').join(',')
+      toDelete = db.prepare(`SELECT * FROM tasks WHERE id NOT IN (${ph})`).all(...ids)
+    } else {
+      toDelete = db.prepare(`SELECT * FROM tasks`).all()
+    }
+    const insDel = db.prepare(`
+      INSERT OR REPLACE INTO deleted_tasks
+      (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, deletedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    for (const t of toDelete) {
+      insDel.run(
+        t.id, t.title, t.deadline, t.priority, t.status,
+        t.assignee, t.notes, t.tags, t.workDir, t.archived,
+        t.createdAt, nowISO
+      )
+    }
     if (ids.length) {
       const ph = ids.map(() => '?').join(',')
       db.prepare(`DELETE FROM tasks WHERE id NOT IN (${ph})`).run(...ids)
@@ -482,6 +528,7 @@ function saveData(data) {
     db.prepare(`INSERT OR REPLACE INTO settings (key, value, updatedAt) VALUES (?, ?, ?)`)
       .run('app', JSON.stringify(data.settings ?? {}), nowISO)
   })()
+  updateTrayTooltip()
 }
 
 function checkDeadlines(data) {
@@ -611,7 +658,7 @@ async function createWindow() {
 
 function createTray() {
   tray = new Tray(appIcon)
-  tray.setToolTip(APP_NAME)
+  updateTrayTooltip()
 
   const menu = Menu.buildFromTemplate([
     { label: '显示 / 隐藏',  click: () => { mainWindow.show(); mainWindow.focus() } },
@@ -629,10 +676,79 @@ function createTray() {
   })
 }
 
+function updateTrayTooltip() {
+  if (!tray || tray.isDestroyed()) return
+  try {
+    const data = loadData()
+    const active = (data.tasks ?? []).filter(t => t.status !== 'done' && !t.archived).length
+    tray.setToolTip(`${APP_NAME} · ${active > 0 ? active + ' 个待处理' : '无任务'}`)
+  } catch {
+    tray.setToolTip(APP_NAME)
+  }
+}
+
 // ── IPC ───────────────────────────────────────────────
 
 ipcMain.handle('tasks:load', () => loadData())
 ipcMain.handle('tasks:save', (_, data) => { saveData(data); return true })
+
+ipcMain.handle('tasks:getDeleted', () => {
+  if (!db) initDb()
+  return db.prepare(`SELECT * FROM deleted_tasks ORDER BY deletedAt DESC`).all().map(r => ({
+    id:        r.id,
+    title:     r.title,
+    deadline:  r.deadline,
+    priority:  r.priority,
+    status:    r.status,
+    assignee:  r.assignee,
+    notes:     r.notes,
+    tags:      JSON.parse(r.tags || '[]'),
+    workDir:   r.workDir,
+    archived:  r.archived === 1,
+    createdAt: r.createdAt,
+    deletedAt: r.deletedAt,
+  }))
+})
+
+ipcMain.handle('tasks:restore', (_, id) => {
+  if (!db) initDb()
+  const t = db.prepare(`SELECT * FROM deleted_tasks WHERE id = ?`).get(id)
+  if (!t) return false
+  db.prepare(`
+    INSERT OR REPLACE INTO tasks
+    (id, title, deadline, priority, status, assignee, notes, tags, workDir, archived, createdAt, updatedAt, syncVersion)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    t.id, t.title, t.deadline, t.priority, t.status,
+    t.assignee, t.notes, t.tags, t.workDir, t.archived,
+    t.createdAt, new Date().toISOString(), 1
+  )
+  db.prepare(`DELETE FROM deleted_tasks WHERE id = ?`).run(id)
+  updateTrayTooltip()
+  return true
+})
+
+ipcMain.handle('tasks:permanentDelete', (_, id) => {
+  if (!db) initDb()
+  db.prepare(`DELETE FROM deleted_tasks WHERE id = ?`).run(id)
+  return true
+})
+
+ipcMain.handle('tasks:clearRecycleBin', () => {
+  if (!db) initDb()
+  db.prepare(`DELETE FROM deleted_tasks`).run()
+  return true
+})
+
+// 定时清理：每 24 小时删除超过 30 天的回收站任务
+function cleanRecycleBin() {
+  if (!db) return
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString()
+  db.prepare(`DELETE FROM deleted_tasks WHERE deletedAt < ?`).run(cutoff)
+}
+setInterval(cleanRecycleBin, 86400000)
+// 启动时也执行一次
+cleanRecycleBin()
 
 ipcMain.handle('window:collapse', () => {
   // 贴边缩入时先把窗口拉回可见位置，再折叠

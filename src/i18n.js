@@ -110,6 +110,21 @@ export const messages = {
     // 设置 — 每日摘要
     dailySummarySection: '每日摘要通知',
     dailySummaryHint:    '每天早上 9 点推送今日任务摘要',
+
+    // 统计
+    statActive:    '待处理',
+    statDoneWeek:  '本周完成',
+    statOverdue:   '逾期',
+
+    // 回收站
+    recycleBin:         '回收站',
+    recycleEmpty:       '回收站为空',
+    deletedAt:          '删除于',
+    restore:            '恢复',
+    permanentDelete:    '彻底删除',
+    clearAll:           '清空回收站',
+    confirmClearRecycle:'确定清空回收站？此操作不可撤销。',
+    untitled:           '无标题',
   },
 
   en: {
@@ -207,6 +222,19 @@ export const messages = {
 
     dailySummarySection: 'Daily Summary',
     dailySummaryHint:    'Push a morning summary at 9 AM',
+
+    statActive:    'Active',
+    statDoneWeek:  'Done This Week',
+    statOverdue:   'Overdue',
+
+    recycleBin:         'Recycle Bin',
+    recycleEmpty:       'Recycle bin is empty',
+    deletedAt:          'Deleted',
+    restore:            'Restore',
+    permanentDelete:    'Delete Permanently',
+    clearAll:           'Clear All',
+    confirmClearRecycle:'Clear the recycle bin? This cannot be undone.',
+    untitled:           'Untitled',
   },
 }
 

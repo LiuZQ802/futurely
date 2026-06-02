@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   loadData:       ()      => ipcRenderer.invoke('tasks:load'),
   saveData:       (data)  => ipcRenderer.invoke('tasks:save', data),
+  getDeletedTasks:()      => ipcRenderer.invoke('tasks:getDeleted'),
+  restoreTask:    (id)    => ipcRenderer.invoke('tasks:restore', id),
+  permanentDeleteTask:(id)=> ipcRenderer.invoke('tasks:permanentDelete', id),
+  clearRecycleBin:()      => ipcRenderer.invoke('tasks:clearRecycleBin'),
   collapseWindow: ()      => ipcRenderer.invoke('window:collapse'),
   expandWindow:   ()      => ipcRenderer.invoke('window:expand'),
   startDrag:      ()      => ipcRenderer.invoke('window:startDrag'),

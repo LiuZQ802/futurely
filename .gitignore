@@ -7,7 +7,8 @@ dist-electron/
 release/
 
 # 自动生成的图标（由 scripts/gen-icon.js 构建时生成）
-public/
+public/icon.png
+public/icon.ico
 
 # 内部文档 / AI 规划
 docs/

@@ -42,6 +42,33 @@
 
       <div v-if="updateState === 'error'" class="update-banner ok">{{ t('updateError') }}</div>
 
+      <!-- 统计 -->
+      <div class="stats-wrap">
+        <div class="stat-row">
+          <div class="stat-box">
+            <span class="stat-num">{{ stats.active }}</span>
+            <span class="stat-label">{{ t('statActive') }}</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num">{{ stats.doneThisWeek }}</span>
+            <span class="stat-label">{{ t('statDoneWeek') }}</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-num" style="color: var(--p-urgent)">{{ stats.overdue }}</span>
+            <span class="stat-label">{{ t('statOverdue') }}</span>
+          </div>
+        </div>
+        <div v-if="stats.total > 0" class="priority-bar">
+          <div
+            v-for="p in priorityDist"
+            :key="p.key"
+            class="p-seg"
+            :style="{ width: p.pct + '%', background: p.color }"
+            :title="p.label + ' ' + p.count + ' (' + Math.round(p.pct) + '%)'"
+          />
+        </div>
+      </div>
+
       <p class="credit">MIT © Ziqi Liu</p>
     </div>
   </div>
@@ -49,6 +76,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
 
 defineEmits(['close'])
@@ -60,6 +88,38 @@ const updateInfo  = ref(null)
 const updateLabel = computed(() =>
   updateState.value === 'checking' ? t('checking') : t('checkUpdate')
 )
+
+const store = useTaskStore()
+
+const stats = computed(() => {
+  const tasks = store.tasks
+  const now = new Date()
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0,0,0,0)
+
+  const active = tasks.filter(t => t.status !== 'done' && !t.archived).length
+  const doneThisWeek = tasks.filter(t => {
+    if (t.status !== 'done') return false
+    const ua = t.updatedAt || t.createdAt
+    return ua && new Date(ua) >= weekStart
+  }).length
+  const overdue = tasks.filter(t => {
+    if (t.status === 'done' || !t.deadline) return false
+    return new Date(t.deadline) < now
+  }).length
+  return { active, doneThisWeek, overdue, total: tasks.length }
+})
+
+const priorityDist = computed(() => {
+  const tasks = store.tasks.filter(t => !t.archived)
+  if (!tasks.length) return []
+  const map = { urgent: 0, high: 0, medium: 0, low: 0 }
+  tasks.forEach(t => { map[t.priority] = (map[t.priority] || 0) + 1 })
+  const colors = { urgent: 'var(--p-urgent)', high: 'var(--p-high)', medium: 'var(--p-medium)', low: 'var(--p-low)' }
+  const labels = { urgent: t('pUrgent'), high: t('pHigh'), medium: t('pMedium'), low: t('pLow') }
+  return Object.entries(map)
+    .filter(([, c]) => c > 0)
+    .map(([key, count]) => ({ key, count, color: colors[key], label: labels[key], pct: (count / tasks.length) * 100 }))
+})
 
 onMounted(async () => {
   version.value = await window.electronAPI?.getVersion() ?? ''
@@ -223,6 +283,48 @@ function openUrl(url) { window.electronAPI?.openUrl(url) }
   color: var(--t3);
   font-size: 11px;
   margin: 6px 0 0;
+}
+
+/* ── 统计 ── */
+.stats-wrap {
+  width: 100%;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+}
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.stat-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-hover);
+  line-height: 1;
+}
+.stat-label {
+  font-size: 10px;
+  color: var(--t3);
+}
+.priority-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.p-seg {
+  height: 100%;
+  transition: width 0.3s ease;
 }
 
 .theme-light .btn-update { color: #062030; }

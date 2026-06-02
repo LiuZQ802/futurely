@@ -28,19 +28,17 @@
     </div>
 
     <!-- 列表 -->
-    <div class="list">
-      <template v-if="filtered.length">
-        <TaskCard
-          v-for="task in filtered"
-          :key="task.id"
-          :task="task"
-          @edit="$emit('edit-task', task)"
-        />
-      </template>
-      <div v-else class="empty">
+    <TransitionGroup name="task" tag="div" class="list">
+      <TaskCard
+        v-for="task in filtered"
+        :key="task.id"
+        :task="task"
+        @edit="$emit('edit-task', task)"
+      />
+      <div v-if="!filtered.length" key="empty" class="empty">
         <span>{{ t('noTasks') }}</span>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -217,5 +215,24 @@ const filtered = computed(() => {
   color: var(--t2);
   font-size: 14px;
   padding: 40px 0;
+}
+
+/* ── 任务卡片进入/离开动画 ── */
+.task-move,
+.task-enter-active,
+.task-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.task-enter-from {
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+}
+.task-leave-to {
+  opacity: 0;
+  transform: translateX(50px);
+}
+.task-leave-active {
+  position: absolute;
+  width: calc(100% - 20px);
 }
 </style>

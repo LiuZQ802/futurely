@@ -140,6 +140,14 @@
             <button class="btn-add" @click="addTag">{{ t('addBtn') }}</button>
           </div>
         </section>
+
+        <!-- 回收站 -->
+        <section>
+          <div class="toggle-row" @click="$emit('open-recycle')" style="cursor: pointer">
+            <span class="toggle-label">🗑 {{ t('recycleBin') }}</span>
+            <span style="color: var(--t3); font-size: 13px">›</span>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -150,7 +158,7 @@ import { ref, computed } from 'vue'
 import { useTaskStore } from '../store/tasks.js'
 import { useI18n } from '../i18n.js'
 
-defineEmits(['close'])
+defineEmits(['close', 'open-recycle'])
 
 const store = useTaskStore()
 const { t } = useI18n()

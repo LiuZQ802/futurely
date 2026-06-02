@@ -35,10 +35,21 @@
     />
 
     <!-- 设置面板 -->
-    <SettingsPanel v-if="showSettings" @close="showSettings = false" />
+    <SettingsPanel
+      v-if="showSettings"
+      @close="showSettings = false"
+      @open-recycle="showSettings = false; showRecycle = true"
+    />
 
     <!-- 关于面板 -->
     <AboutPanel v-if="showAbout" @close="showAbout = false" />
+
+    <!-- 回收站 -->
+    <RecycleBinPanel
+      v-if="showRecycle"
+      @close="showRecycle = false"
+      @restored="onRestored"
+    />
   </div>
 </template>
 
@@ -50,12 +61,24 @@ import TaskList from './TaskList.vue'
 import TaskForm from './TaskForm.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import AboutPanel from './AboutPanel.vue'
+import RecycleBinPanel from './RecycleBinPanel.vue'
+import { useTaskStore } from '../store/tasks.js'
+
 const collapsed = ref(false)
 const showForm = ref(false)
 const showSettings = ref(false)
 const showAbout = ref(false)
+const showRecycle = ref(false)
 
 const editingTask = ref(null)
+
+function onRestored() {
+  // 恢复任务后刷新列表
+  window.electronAPI?.loadData().then(data => {
+    const store = useTaskStore()
+    store.tasks = data.tasks ?? []
+  })
+}
 
 const resizeDirs = ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se']
 
