@@ -617,12 +617,13 @@ ipcMain.handle('dialog:selectFolder', async () => {
   return canceled ? null : filePaths[0]
 })
 
-ipcMain.handle('shell:openPath', async (_, p) => {
-  // openPath 返回空字符串表示成功，失败则用 file:// 兜底
-  const err = await shell.openPath(p)
-  if (err) {
-    const uri = 'file:///' + p.replace(/\\/g, '/')
-    await shell.openExternal(uri)
+ipcMain.handle('shell:openPath', (_, p) => {
+  if (!p) return
+  if (process.platform === 'win32') {
+    // 直接用 explorer.exe 最可靠，路径含空格时用引号包裹
+    require('child_process').exec(`explorer.exe "${p}"`)
+  } else {
+    shell.openPath(p)
   }
 })
 
