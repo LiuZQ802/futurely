@@ -24,7 +24,7 @@
           v-if="task.workDir"
           class="dir-btn"
           :title="task.workDir"
-          @click.stop="window.electronAPI?.openPath(task.workDir)"
+          @click.stop="openWorkDir"
         >📁</button>
       </div>
       <div v-if="task.notes" class="notes-preview">{{ task.notes }}</div>
@@ -47,6 +47,10 @@ const SLABEL = { todo: 'sTodo', inprogress: 'sInProgress', done: 'sDone' }
 const SICON  = { todo: '○', inprogress: '◑', done: '●' }
 
 const priorityLabel = computed(() => t(PLABEL[props.task.priority] ?? 'pMedium'))
+
+function openWorkDir() {
+  window.electronAPI?.openPath(props.task.workDir)
+}
 const statusLabel   = computed(() => t(SLABEL[props.task.status]   ?? 'sTodo'))
 const statusIcon    = computed(() => SICON[props.task.status] ?? '○')
 
