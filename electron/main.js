@@ -7,6 +7,7 @@ const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
 let mainWindow = null
 let tray = null
+let appIcon = null   // 启动时生成一次，全局复用
 let collapsedPos = null
 let resizeTimer = null
 let resizeState = null
@@ -288,8 +289,9 @@ function checkDeadlines(data) {
     else                       label = `即将截止`
 
     new Notification({
-      title: `${APP_NAME} · 任务提醒`,
-      body:  `「${task.title}」${label}`,
+      title:  `${APP_NAME} · 任务提醒`,
+      body:   `「${task.title}」${label}`,
+      icon:   appIcon,
       silent: false,
     }).show()
   })
@@ -310,7 +312,7 @@ async function createWindow() {
 
   mainWindow = new BrowserWindow({
     width, height, x, y,
-    icon: makeAppIcon(),
+    icon: appIcon,
     frame: false,
     transparent: true,
     hasShadow: false,
@@ -391,7 +393,7 @@ async function createWindow() {
 }
 
 function createTray() {
-  tray = new Tray(makeAppIcon())
+  tray = new Tray(appIcon)
   tray.setToolTip(APP_NAME)
 
   const menu = Menu.buildFromTemplate([
@@ -564,6 +566,7 @@ ipcMain.handle('window:stopResize', () => {
 
 app.whenReady().then(async () => {
   app.setName(APP_NAME)
+  appIcon = makeAppIcon()   // 生成一次，全局复用
   await createWindow()
   createTray()
 
@@ -583,12 +586,13 @@ app.whenReady().then(async () => {
       const current = app.getVersion()
       if (latest && latest !== current && mainWindow && !mainWindow.isDestroyed()) {
         const { response } = await dialog.showMessageBox(mainWindow, {
-          type: 'info',
-          buttons: ['下载更新', '稍后'],
+          type:      'info',
+          icon:      appIcon,
+          buttons:   ['下载更新', '稍后'],
           defaultId: 0,
-          title: `${APP_NAME} 有新版本`,
-          message: `发现新版本 v${latest}`,
-          detail: `当前版本：v${current}\n点击「下载更新」前往下载页面。`,
+          title:     APP_NAME,
+          message:   `发现新版本 v${latest}`,
+          detail:    `当前版本：v${current}\n点击「下载更新」前往下载页面。`,
         })
         if (response === 0) shell.openExternal(json.html_url)
       }
@@ -609,7 +613,14 @@ ipcMain.handle('dialog:selectFolder', async () => {
   return canceled ? null : filePaths[0]
 })
 
-ipcMain.handle('shell:openPath', (_, p) => shell.openPath(p))
+ipcMain.handle('shell:openPath', async (_, p) => {
+  // openPath 返回空字符串表示成功，失败则用 file:// 兜底
+  const err = await shell.openPath(p)
+  if (err) {
+    const uri = 'file:///' + p.replace(/\\/g, '/')
+    await shell.openExternal(uri)
+  }
+})
 
 ipcMain.handle('app:checkUpdate', async () => {
   try {
@@ -618,7 +629,7 @@ ipcMain.handle('app:checkUpdate', async () => {
     const data = await res.json()
     const latest  = (data.tag_name ?? '').replace(/^v/, '')
     const current = app.getVersion()
-    return { latest, current, url: data.html_url, hasUpdate: latest !== current }
+    return { latest, current, url: data.html_url, hasUpdate: latest !== current, body: data.body ?? '' }
   } catch {
     return { error: true }
   }

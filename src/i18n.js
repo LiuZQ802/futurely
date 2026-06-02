@@ -89,6 +89,7 @@ export const messages = {
     updateAvailable:        '发现新版本',
     updateError:            '检查失败，请稍后重试',
     downloadUpdate:         '前往下载',
+    whatsNew:               '更新内容',
     version:                '版本',
   },
 
@@ -170,6 +171,7 @@ export const messages = {
     updateAvailable:        'New version available',
     updateError:            'Check failed, try again later',
     downloadUpdate:         'Download',
+    whatsNew:               "What's New",
     version:                'Version',
   },
 }

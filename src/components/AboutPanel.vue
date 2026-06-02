@@ -31,6 +31,13 @@
           {{ t('downloadUpdate') }} ↗
         </button>
       </div>
+
+      <!-- 新版本 changelog -->
+      <div v-if="updateInfo?.hasUpdate && updateInfo.body" class="changelog">
+        <div class="changelog-title">{{ t('whatsNew') }}</div>
+        <pre class="changelog-body">{{ updateInfo.body }}</pre>
+      </div>
+
       <div v-if="updateState === 'error'" class="update-banner ok">{{ t('updateError') }}</div>
 
       <p class="credit">MIT © Ziqi Liu</p>
@@ -183,6 +190,32 @@ function openUrl(url) { window.electronAPI?.openUrl(url) }
   transition: background 0.15s;
 }
 .btn-dl:hover { background: #059669; }
+
+.changelog {
+  width: 100%;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.changelog-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t2);
+  padding: 6px 10px 4px;
+}
+.changelog-body {
+  font-size: 11px;
+  color: var(--t2);
+  line-height: 1.6;
+  padding: 0 10px 8px;
+  margin: 0;
+  max-height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+}
 
 .credit {
   color: var(--t3);
