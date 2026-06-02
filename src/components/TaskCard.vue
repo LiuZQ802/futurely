@@ -20,6 +20,12 @@
         <span v-if="task.deadline" class="dl" :class="dlClass">📅 {{ fmtDeadline(task.deadline) }}</span>
         <span v-if="task.assignee && task.assignee !== '自己'" class="who">👤 {{ task.assignee }}</span>
         <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>
+        <button
+          v-if="task.workDir"
+          class="dir-btn"
+          :title="task.workDir"
+          @click.stop="window.electronAPI?.openPath(task.workDir)"
+        >📁</button>
       </div>
       <div v-if="task.notes" class="notes-preview">{{ task.notes }}</div>
     </div>
@@ -156,6 +162,13 @@ const dlClass = computed(() => {
 .dl.warn     { color: var(--p-high);   font-weight: 600; }
 .dl.overdue  { color: var(--p-urgent); font-weight: 600; }
 .who         { font-size: 11px; color: var(--t2); }
+.dir-btn {
+  background: transparent; border: none;
+  font-size: 12px; padding: 0 2px; cursor: pointer;
+  border-radius: 4px; line-height: 1;
+  transition: transform 0.15s;
+}
+.dir-btn:hover { transform: scale(1.2); }
 
 /* 备注预览：默认隐藏，hover 时展开 */
 .notes-preview {

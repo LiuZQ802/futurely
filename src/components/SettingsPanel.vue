@@ -21,19 +21,6 @@
           </div>
         </section>
 
-        <!-- 工作目录 -->
-        <section>
-          <h4>{{ t('workDirsSection') }}</h4>
-          <div v-if="store.settings.workDirs?.length" class="dir-list">
-            <div v-for="(dir, idx) in store.settings.workDirs" :key="dir" class="dir-item">
-              <span class="dir-icon">📁</span>
-              <span class="dir-name" :title="dir">{{ basename(dir) }}</span>
-              <button class="dir-remove" @click="removeDir(idx)">×</button>
-            </div>
-          </div>
-          <button class="btn-add-dir" @click="addDir">＋ {{ t('addDirBtn') }}</button>
-        </section>
-
         <!-- 语言 -->
         <section>
           <h4>{{ t('langSection') }}</h4>
@@ -156,22 +143,6 @@ function toggleAutoLaunch() {
   window.electronAPI?.setAutoLaunch(next)
 }
 
-// 工作目录
-function basename(p) { return p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p }
-
-async function addDir() {
-  const p = await window.electronAPI?.selectFolder()
-  if (!p) return
-  const dirs = [...(store.settings.workDirs ?? [])]
-  if (!dirs.includes(p)) { dirs.push(p); store.updateSettings({ workDirs: dirs }) }
-}
-
-function removeDir(idx) {
-  const dirs = [...(store.settings.workDirs ?? [])]
-  dirs.splice(idx, 1)
-  store.updateSettings({ workDirs: dirs })
-}
-
 const currentLang  = computed(() => store.settings.lang  ?? 'zh')
 const currentTheme = computed(() => store.settings.theme ?? 'dark')
 
@@ -287,30 +258,6 @@ section h4 {
   background: var(--t3); transition: transform 0.2s, background 0.2s;
 }
 .toggle-btn.on .thumb { transform: translateX(16px); background: #fff; }
-
-/* 工作目录 */
-.dir-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-.dir-item {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--layer3); border: 1px solid var(--layer3-border);
-  border-radius: 7px; padding: 5px 8px;
-}
-.dir-icon { font-size: 13px; flex-shrink: 0; }
-.dir-name {
-  flex: 1; font-size: 12px; color: var(--t1);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.dir-remove {
-  background: transparent; border: none; color: var(--t3);
-  cursor: pointer; font-size: 14px; padding: 0; line-height: 1; flex-shrink: 0;
-}
-.dir-remove:hover { color: #f87171; }
-.btn-add-dir {
-  width: 100%; background: var(--layer3); border: 1px dashed var(--layer3-border);
-  color: var(--t2); font-size: 12px; padding: 7px; border-radius: 7px;
-  cursor: pointer; font-family: inherit; transition: all 0.15s;
-}
-.btn-add-dir:hover { color: var(--t1); border-color: var(--accent); }
 
 /* 分段按钮组 */
 .seg-group {

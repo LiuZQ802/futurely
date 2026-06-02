@@ -65,6 +65,21 @@
         </div>
 
         <div class="field">
+          <label>{{ t('workDirLabel') }}</label>
+          <div class="dir-row">
+            <input
+              :value="form.workDir ? basename(form.workDir) : ''"
+              :placeholder="t('workDirPlaceholder')"
+              :title="form.workDir"
+              readonly
+              class="dir-input"
+            />
+            <button type="button" class="btn-browse" @click="browseDir">{{ t('browseBtn') }}</button>
+            <button v-if="form.workDir" type="button" class="btn-clear-dir" @click="form.workDir = ''">✕</button>
+          </div>
+        </div>
+
+        <div class="field">
           <label>{{ t('notesLabel') }}</label>
           <textarea v-model="form.notes" :placeholder="t('notesPlaceholder')" rows="3" />
         </div>
@@ -103,7 +118,17 @@ const form = ref({
   assignee: props.task?.assignee ?? '自己',
   tags:     [...(props.task?.tags ?? [])],
   notes:    props.task?.notes    ?? '',
+  workDir:  props.task?.workDir  ?? '',
 })
+
+function basename(p) {
+  return p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p
+}
+
+async function browseDir() {
+  const p = await window.electronAPI?.selectFolder()
+  if (p) form.value.workDir = p
+}
 
 function toggleTag(tag) {
   const idx = form.value.tags.indexOf(tag)
@@ -218,6 +243,33 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 select option { background: var(--layer3); color: var(--t1); }
 textarea { resize: none; }
+
+.dir-row { display: flex; gap: 6px; align-items: center; }
+.dir-input {
+  flex: 1;
+  background: var(--layer3);
+  border: 1px solid var(--layer3-border);
+  border-radius: 7px;
+  color: var(--t2);
+  font-size: 12px;
+  padding: 7px 10px;
+  cursor: default;
+}
+.dir-input::placeholder { color: var(--t3); }
+.btn-browse {
+  font-family: inherit; font-size: 12px;
+  padding: 6px 10px; border-radius: 7px; cursor: pointer;
+  background: var(--layer3); color: var(--t2);
+  border: 1px solid var(--layer3-border); white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-browse:hover { color: var(--t1); border-color: var(--accent); }
+.btn-clear-dir {
+  background: transparent; border: none; color: var(--t3);
+  cursor: pointer; font-size: 13px; padding: 4px; border-radius: 5px;
+  transition: color 0.15s;
+}
+.btn-clear-dir:hover { color: #f87171; }
 
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-chip {
