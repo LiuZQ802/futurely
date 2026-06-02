@@ -5,6 +5,10 @@ const zlib = require('zlib')
 
 const isDev = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
+// Windows 通知/弹框的应用名称来自 AppUserModelId，必须在 ready 之前设置
+app.setAppUserModelId('Futurely')
+app.name = 'Futurely'
+
 let mainWindow = null
 let tray = null
 let appIcon = null   // 启动时生成一次，全局复用
