@@ -588,7 +588,7 @@ app.whenReady().then(async () => {
       const json = await res.json()
       const latest  = (json.tag_name ?? '').replace(/^v/, '')
       const current = app.getVersion()
-      if (latest && latest !== current && mainWindow && !mainWindow.isDestroyed()) {
+      if (latest && semverGt(latest, current) && mainWindow && !mainWindow.isDestroyed()) {
         const { response } = await dialog.showMessageBox(mainWindow, {
           type:      'info',
           icon:      appIcon,
@@ -627,6 +627,18 @@ ipcMain.handle('shell:openPath', (_, p) => {
   }
 })
 
+// 语义化版本比较：a > b 返回 true
+function semverGt(a, b) {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] ?? 0, y = pb[i] ?? 0
+    if (x > y) return true
+    if (x < y) return false
+  }
+  return false
+}
+
 ipcMain.handle('app:checkUpdate', async () => {
   try {
     const res  = await net.fetch('https://api.github.com/repos/LiuZQ802/futurely/releases/latest',
@@ -634,7 +646,7 @@ ipcMain.handle('app:checkUpdate', async () => {
     const data = await res.json()
     const latest  = (data.tag_name ?? '').replace(/^v/, '')
     const current = app.getVersion()
-    return { latest, current, url: data.html_url, hasUpdate: latest !== current, body: data.body ?? '' }
+    return { latest, current, url: data.html_url, hasUpdate: semverGt(latest, current), body: data.body ?? '' }
   } catch {
     return { error: true }
   }
